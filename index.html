@@ -2091,6 +2091,28 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 9px; font-weight: 700; color: #fff;
   }
+
+  /* ===== ESPACE DE DISCUSSION (chat) ===== */
+  .chat-tab {
+    border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+    padding: 7px 14px; border-radius: 8px; font: 600 12.5px 'Segoe UI', sans-serif;
+    cursor: pointer; transition: all .15s;
+  }
+  .chat-tab:hover { background: var(--gradient-soft); }
+  .chat-tab-active { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .chat-msg {
+    border-radius: 10px; padding: 7px 11px; background: #fff;
+    border: 1px solid var(--border); max-width: 92%;
+  }
+  .chat-msg.mine { align-self: flex-end; background: var(--gradient-soft); border-color: var(--blue-light); }
+  .chat-msg.tome { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(0,180,216,.15); }
+  .chat-msg-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 2px; }
+  .chat-msg-author { font-size: 12px; font-weight: 700; color: var(--navy); }
+  .chat-msg-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+  .chat-msg-to { display: inline-block; font-size: 10.5px; font-weight: 700; color: var(--blue); background: #e7f0ff; border-radius: 10px; padding: 1px 7px; margin-bottom: 3px; }
+  .chat-msg-text { font-size: 13px; color: var(--text); line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .chat-empty { color: var(--text-muted); font-size: 12.5px; text-align: center; margin: auto; padding: 20px; }
+  @media (max-width: 820px) { .chat-axes-row { flex-direction: column; } }
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -2155,9 +2177,8 @@
     <button class="nav-item" data-view="resources" onclick="showView('resources',this);if(window.innerWidth<=768)toggleSidebar()">
       <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M8 2v3h3"/><path d="M4 7h6M4 9.5h4"/></svg></span> Ressources
     </button>
-    <button class="nav-item" onclick="openEmailModal()">
-      <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2.5" width="12" height="9" rx="1.5"/><path d="M1.5 3.5L7 7.5l5.5-4"/></svg></span> Envoyer un email
-    </button>
+    <button class="nav-item" onclick="focusEmailTab()">
+      <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2.5" width="12" height="9" rx="1.5"/><path d="M1.5 3.5L7 7.5l5.5-4"/></svg></span> Email privé</button>
   </nav>
 
   <!-- ===== ÉQUIPE PROJET ===== -->
@@ -2324,8 +2345,63 @@
     </div>
 
 
-    <!-- Phase progress -->
-    <div class="section-card">
+    <!-- Discussion d'équipe (gauche) + Avancement par axe (droite) -->
+    <div class="chat-axes-row" style="display:flex;gap:18px;align-items:stretch;flex-wrap:wrap;margin-bottom:20px">
+
+    <!-- ===== ESPACE DE DISCUSSION ===== -->
+    <div class="section-card chat-card" id="chatCard" style="flex:1 1 360px;min-width:300px;display:flex;flex-direction:column;margin-bottom:0">
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button id="chatTabBtn" class="chat-tab chat-tab-active" onclick="switchChatTab('chat')">💬 Discussion</button>
+        <button id="emailTabBtn" class="chat-tab" onclick="switchChatTab('email')">✉️ Email privé</button>
+      </div>
+
+      <!-- VUE CHAT -->
+      <div id="chatView" style="display:flex;flex-direction:column;flex:1;min-height:380px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Vous êtes</span>
+          <select id="chatMe" class="form-control" style="height:32px;padding:2px 8px;font-size:13px" onchange="setChatMe()"></select>
+        </div>
+        <div id="chatMessages" style="flex:1;overflow-y:auto;max-height:300px;min-height:200px;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafcff;display:flex;flex-direction:column;gap:8px"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;align-items:center">
+          <select id="chatTo" class="form-control" style="height:38px;padding:4px 6px;font-size:12px;flex:0 0 128px" title="Destinataire"></select>
+          <input id="chatInput" class="form-control" type="text" placeholder="Votre message…" style="flex:1;height:38px" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="btn-primary" style="height:38px;white-space:nowrap" onclick="sendChatMessage()">Envoyer</button>
+        </div>
+      </div>
+
+      <!-- VUE EMAIL PRIVÉ -->
+      <div id="emailView" style="display:none;flex-direction:column;flex:1">
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Expéditeur — au nom de</label>
+          <select class="form-control" id="emailFrom"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Destinataires * (séparés par des virgules)</label>
+          <input class="form-control" type="text" id="emailTo" placeholder="prenom.nom@organisation.fr, …">
+          <div id="emailMemberChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Copie (CC)</label>
+          <input class="form-control" type="text" id="emailCc" placeholder="(optionnel)">
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Objet *</label>
+          <input class="form-control" type="text" id="emailSubject" placeholder="Ex : Point d'avancement — Commission">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Message *</label>
+          <textarea class="form-control" id="emailBody" rows="4" placeholder="Bonjour,&#10;…"></textarea>
+        </div>
+        <div id="emailStatus" style="font-size:12px;min-height:16px;margin-bottom:6px"></div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn-primary" id="emailSendBtn" onclick="sendEmailFromUI()">✉️ Envoyer</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Envoi technique via le compte de la commission ; affiché « au nom de » l'expéditeur choisi, réponses adressées à son email.</div>
+      </div>
+    </div>
+
+    <!-- Avancement par axe (droite) -->
+    <div class="section-card" style="flex:1 1 360px;min-width:300px;margin-bottom:0;display:flex;flex-direction:column">
       <div class="section-header">
         <div class="section-title"><span class="icon">📊</span> Avancement par axe de travail</div>
       </div>
@@ -2361,6 +2437,8 @@
         </button>
       </div>
     </div>
+
+    </div><!-- /chat-axes-row -->
 
     <!-- Ressources widget -->
     <div class="section-card" id="dashResourceCard" style="margin-bottom:20px">
@@ -2947,42 +3025,6 @@
   </div>
 </div>
 
-<!-- ===== MODAL : Envoyer un email ===== -->
-<div class="modal-backdrop" id="emailBackdrop" onclick="closeEmailOutside(event)">
-  <div class="modal">
-    <div class="modal-title">✉️ <span>Envoyer un email</span></div>
-
-    <div class="form-group">
-      <label class="form-label">Destinataires * (séparés par des virgules)</label>
-      <input class="form-control" type="text" id="emailTo" placeholder="prenom.nom@organisation.fr, …">
-      <div id="emailMemberChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Copie (CC)</label>
-      <input class="form-control" type="text" id="emailCc" placeholder="(optionnel)">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Objet *</label>
-      <input class="form-control" type="text" id="emailSubject" placeholder="Ex : Point d'avancement — Commission Développement RH">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Message *</label>
-      <textarea class="form-control" id="emailBody" rows="7" placeholder="Bonjour,&#10;…"></textarea>
-    </div>
-
-    <div id="emailStatus" style="font-size:12px;min-height:16px;margin-bottom:6px"></div>
-
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeEmailModal()">Annuler</button>
-      <button class="btn-primary" id="emailSendBtn" onclick="sendEmailFromUI()">✉️ Envoyer</button>
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-top:10px;text-align:center">Expéditeur : Commission Développement RH &amp; IA — ANDRH</div>
-  </div>
-</div>
-
 <!-- ===== PHASE EXPAND MODAL ===== -->
 <div id="phaseExpandBackdrop" onclick="closePhaseExpand(event)">
   <div id="phaseExpandModal">
@@ -3522,11 +3564,107 @@ document.addEventListener('click', function(e) {
 });
 
 /* ============================================================
-   ENVOI D'EMAIL (via backend Gmail)
+   ESPACE DE DISCUSSION (chat) + EMAIL PRIVÉ
    ============================================================ */
-function openEmailModal() {
-  var st = document.getElementById('emailStatus');
-  if (st) { st.textContent = ''; }
+var messages = [];
+var chatMe = '';
+var _chatLastCount = -1;
+
+function esc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function switchChatTab(tab) {
+  var isChat = tab !== 'email';
+  document.getElementById('chatView').style.display  = isChat ? 'flex' : 'none';
+  document.getElementById('emailView').style.display = isChat ? 'none' : 'flex';
+  document.getElementById('chatTabBtn').classList.toggle('chat-tab-active', isChat);
+  document.getElementById('emailTabBtn').classList.toggle('chat-tab-active', !isChat);
+  if (!isChat) populateEmailUI();
+}
+
+function focusEmailTab() {
+  if (window.innerWidth <= 768) toggleSidebar();
+  switchChatTab('email');
+  var c = document.getElementById('chatCard');
+  if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function setChatMe() {
+  var sel = document.getElementById('chatMe');
+  chatMe = sel ? sel.value : '';
+  try { localStorage.setItem('andrh_chat_me', chatMe); } catch (e) {}
+}
+
+function renderChat() {
+  var box = document.getElementById('chatMessages');
+  if (!box) return;
+  if (!chatMe) { try { chatMe = localStorage.getItem('andrh_chat_me') || ''; } catch (e) {} }
+
+  var meSel = document.getElementById('chatMe');
+  if (meSel) {
+    var hMe = '<option value="">— Choisir —</option>';
+    (members || []).forEach(function (m) { hMe += '<option value="' + esc_(m.name) + '">' + esc_(m.name) + '</option>'; });
+    meSel.innerHTML = hMe;
+    if (chatMe) meSel.value = chatMe;
+  }
+  var toSel = document.getElementById('chatTo');
+  if (toSel) {
+    var prevTo = toSel.value;
+    var hTo = '<option value="all">Tout le groupe</option>';
+    (members || []).forEach(function (m) { if (m.name !== chatMe) hTo += '<option value="' + esc_(m.name) + '">@ ' + esc_(m.name) + '</option>'; });
+    toSel.innerHTML = hTo;
+    if (prevTo) toSel.value = prevTo;
+  }
+
+  if (!messages.length) {
+    box.innerHTML = '<div class="chat-empty">Aucun message pour l\'instant.<br>Lancez la discussion d\'équipe ✨</div>';
+    _chatLastCount = 0;
+    return;
+  }
+  var sorted = messages.slice().sort(function (a, b) { return (a.id || 0) - (b.id || 0); });
+  var out = '';
+  sorted.forEach(function (m) {
+    var mine = chatMe && String(m.author) === String(chatMe);
+    var tome = chatMe && String(m.to) === String(chatMe) && String(m.to) !== 'all';
+    var cls = 'chat-msg' + (mine ? ' mine' : '') + (tome ? ' tome' : '');
+    var t = '';
+    try { t = new Date(m.ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { t = ''; }
+    out += '<div class="' + cls + '">';
+    out += '<div class="chat-msg-head"><span class="chat-msg-author">' + esc_(m.author || 'Anonyme') + '</span><span class="chat-msg-time">' + t + '</span></div>';
+    if (m.to && String(m.to) !== 'all') out += '<span class="chat-msg-to">→ @' + esc_(m.to) + '</span>';
+    out += '<div class="chat-msg-text">' + esc_(m.text) + '</div>';
+    out += '</div>';
+  });
+  box.innerHTML = out;
+  if (messages.length !== _chatLastCount) { box.scrollTop = box.scrollHeight; _chatLastCount = messages.length; }
+}
+
+function sendChatMessage() {
+  if (!chatMe) { var sel = document.getElementById('chatMe'); chatMe = sel ? sel.value : ''; }
+  if (!chatMe) { alert('Sélectionnez d\'abord votre identité (« Vous êtes »).'); return; }
+  var input = document.getElementById('chatInput');
+  var text = (input.value || '').trim();
+  if (!text) return;
+  var to = document.getElementById('chatTo').value || 'all';
+  input.value = '';
+  var optimistic = { id: Date.now(), ts: new Date().toISOString(), author: chatMe, to: to, text: text };
+  messages.push(optimistic);
+  renderChat();
+  Backend.api('postMessage', { author: chatMe, to: to, text: text }).then(function (res) {
+    if (!res || !res.ok) { optimistic.text = '⚠️ (non envoyé) ' + optimistic.text; renderChat(); }
+  }).catch(function () { optimistic.text = '⚠️ (hors ligne) ' + optimistic.text; renderChat(); });
+}
+
+/* ---- Email privé ---- */
+function populateEmailUI() {
+  var st = document.getElementById('emailStatus'); if (st) st.textContent = '';
+  var fromSel = document.getElementById('emailFrom');
+  if (fromSel) {
+    var prev = fromSel.value;
+    var hf = '<option value="">Commission Développement RH &amp; IA — ANDRH</option>';
+    (members || []).forEach(function (m) { hf += '<option value="' + String(m.id) + '">' + esc_(m.name) + (m.email ? '' : ' (email manquant)') + '</option>'; });
+    fromSel.innerHTML = hf;
+    if (prev) fromSel.value = prev;
+  }
   var chips = document.getElementById('emailMemberChips');
   if (chips) {
     chips.innerHTML = '';
@@ -3535,20 +3673,14 @@ function openEmailModal() {
       chips.innerHTML = '<span style="font-size:11px;color:var(--text-muted)">Astuce : renseignez l\'email des membres (bouton « Responsables ») pour les ajouter en un clic.</span>';
     } else {
       withEmail.forEach(function (m) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = '+ ' + m.name;
+        var b = document.createElement('button'); b.type = 'button'; b.textContent = '+ ' + m.name;
         b.style.cssText = 'font-size:11px;padding:4px 9px;border:1px solid var(--border);border-radius:14px;background:#f0f5ff;color:var(--navy);cursor:pointer';
         b.onclick = function () { addEmailRecipient(m.email); };
         chips.appendChild(b);
       });
     }
   }
-  document.getElementById('emailBackdrop').classList.add('open');
-  setTimeout(function () { var el = document.getElementById('emailTo'); if (el && !el.value) el.focus(); }, 60);
 }
-function closeEmailModal() { document.getElementById('emailBackdrop').classList.remove('open'); }
-function closeEmailOutside(e) { if (e.target === document.getElementById('emailBackdrop')) closeEmailModal(); }
 function addEmailRecipient(email) {
   var el = document.getElementById('emailTo');
   var cur = el.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
@@ -3563,17 +3695,22 @@ function sendEmailFromUI() {
   if (!to)      { st.style.color = 'var(--danger)'; st.textContent = 'Indiquez au moins un destinataire.'; return; }
   if (!subject) { st.style.color = 'var(--danger)'; st.textContent = "L'objet est obligatoire."; return; }
   if (!body)    { st.style.color = 'var(--danger)'; st.textContent = 'Le message est vide.'; return; }
+  var fromSel = document.getElementById('emailFrom');
+  var fromName = '', replyTo = '';
+  if (fromSel && fromSel.value) {
+    var mm = (members || []).filter(function (m) { return String(m.id) === String(fromSel.value); })[0];
+    if (mm) { fromName = mm.name; replyTo = mm.email || ''; }
+  }
   var btn = document.getElementById('emailSendBtn');
   btn.disabled = true; var old = btn.textContent; btn.textContent = 'Envoi…';
   st.style.color = 'var(--text-muted)'; st.textContent = 'Envoi en cours…';
   var htmlBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-  Backend.api('sendEmail', { to: to, cc: cc, subject: subject, body: htmlBody }).then(function (res) {
+  Backend.api('sendEmail', { to: to, cc: cc, subject: subject, body: htmlBody, fromName: fromName, replyTo: replyTo }).then(function (res) {
     btn.disabled = false; btn.textContent = old;
     if (res && res.ok) {
       st.style.color = 'var(--success)'; st.textContent = '✅ Email envoyé à ' + to;
       document.getElementById('emailSubject').value = '';
       document.getElementById('emailBody').value = '';
-      setTimeout(closeEmailModal, 1300);
     } else {
       st.style.color = 'var(--danger)'; st.textContent = 'Échec : ' + ((res && (res.message || res.error)) || 'erreur inconnue');
     }
@@ -3704,6 +3841,7 @@ var Backend = (function () {
       if (projById[t.projectId]) projById[t.projectId].tasks.push(task);
     });
     resources = (d.resources || []).map(function (r) { return r; });
+    messages = (d.messages || []).map(function (m) { return m; });
 
     var curId = null;
     try { curId = localStorage.getItem(CUR_KEY); } catch (e) {}
@@ -3952,6 +4090,7 @@ function renderAll() {
   renderGantt();
   renderAnalytics();
   renderDashResources();
+  if (typeof renderChat === 'function') { try { renderChat(); } catch (e) {} }
 }
 
 /* ============================================================
