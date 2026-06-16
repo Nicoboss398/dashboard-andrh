@@ -2155,6 +2155,9 @@
     <button class="nav-item" data-view="resources" onclick="showView('resources',this);if(window.innerWidth<=768)toggleSidebar()">
       <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M8 2v3h3"/><path d="M4 7h6M4 9.5h4"/></svg></span> Ressources
     </button>
+    <button class="nav-item" onclick="openEmailModal()">
+      <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2.5" width="12" height="9" rx="1.5"/><path d="M1.5 3.5L7 7.5l5.5-4"/></svg></span> Envoyer un email
+    </button>
   </nav>
 
   <!-- ===== ÉQUIPE PROJET ===== -->
@@ -2944,6 +2947,42 @@
   </div>
 </div>
 
+<!-- ===== MODAL : Envoyer un email ===== -->
+<div class="modal-backdrop" id="emailBackdrop" onclick="closeEmailOutside(event)">
+  <div class="modal">
+    <div class="modal-title">✉️ <span>Envoyer un email</span></div>
+
+    <div class="form-group">
+      <label class="form-label">Destinataires * (séparés par des virgules)</label>
+      <input class="form-control" type="text" id="emailTo" placeholder="prenom.nom@organisation.fr, …">
+      <div id="emailMemberChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Copie (CC)</label>
+      <input class="form-control" type="text" id="emailCc" placeholder="(optionnel)">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Objet *</label>
+      <input class="form-control" type="text" id="emailSubject" placeholder="Ex : Point d'avancement — Commission Développement RH">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Message *</label>
+      <textarea class="form-control" id="emailBody" rows="7" placeholder="Bonjour,&#10;…"></textarea>
+    </div>
+
+    <div id="emailStatus" style="font-size:12px;min-height:16px;margin-bottom:6px"></div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEmailModal()">Annuler</button>
+      <button class="btn-primary" id="emailSendBtn" onclick="sendEmailFromUI()">✉️ Envoyer</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:10px;text-align:center">Expéditeur : Commission Développement RH &amp; IA — ANDRH</div>
+  </div>
+</div>
+
 <!-- ===== PHASE EXPAND MODAL ===== -->
 <div id="phaseExpandBackdrop" onclick="closePhaseExpand(event)">
   <div id="phaseExpandModal">
@@ -3483,6 +3522,68 @@ document.addEventListener('click', function(e) {
 });
 
 /* ============================================================
+   ENVOI D'EMAIL (via backend Gmail)
+   ============================================================ */
+function openEmailModal() {
+  var st = document.getElementById('emailStatus');
+  if (st) { st.textContent = ''; }
+  var chips = document.getElementById('emailMemberChips');
+  if (chips) {
+    chips.innerHTML = '';
+    var withEmail = (members || []).filter(function (m) { return m.email; });
+    if (!withEmail.length) {
+      chips.innerHTML = '<span style="font-size:11px;color:var(--text-muted)">Astuce : renseignez l\'email des membres (bouton « Responsables ») pour les ajouter en un clic.</span>';
+    } else {
+      withEmail.forEach(function (m) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = '+ ' + m.name;
+        b.style.cssText = 'font-size:11px;padding:4px 9px;border:1px solid var(--border);border-radius:14px;background:#f0f5ff;color:var(--navy);cursor:pointer';
+        b.onclick = function () { addEmailRecipient(m.email); };
+        chips.appendChild(b);
+      });
+    }
+  }
+  document.getElementById('emailBackdrop').classList.add('open');
+  setTimeout(function () { var el = document.getElementById('emailTo'); if (el && !el.value) el.focus(); }, 60);
+}
+function closeEmailModal() { document.getElementById('emailBackdrop').classList.remove('open'); }
+function closeEmailOutside(e) { if (e.target === document.getElementById('emailBackdrop')) closeEmailModal(); }
+function addEmailRecipient(email) {
+  var el = document.getElementById('emailTo');
+  var cur = el.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  if (cur.indexOf(email) === -1) { cur.push(email); el.value = cur.join(', '); }
+}
+function sendEmailFromUI() {
+  var to = (document.getElementById('emailTo').value || '').trim();
+  var cc = (document.getElementById('emailCc').value || '').trim();
+  var subject = (document.getElementById('emailSubject').value || '').trim();
+  var body = (document.getElementById('emailBody').value || '').trim();
+  var st = document.getElementById('emailStatus');
+  if (!to)      { st.style.color = 'var(--danger)'; st.textContent = 'Indiquez au moins un destinataire.'; return; }
+  if (!subject) { st.style.color = 'var(--danger)'; st.textContent = "L'objet est obligatoire."; return; }
+  if (!body)    { st.style.color = 'var(--danger)'; st.textContent = 'Le message est vide.'; return; }
+  var btn = document.getElementById('emailSendBtn');
+  btn.disabled = true; var old = btn.textContent; btn.textContent = 'Envoi…';
+  st.style.color = 'var(--text-muted)'; st.textContent = 'Envoi en cours…';
+  var htmlBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+  Backend.api('sendEmail', { to: to, cc: cc, subject: subject, body: htmlBody }).then(function (res) {
+    btn.disabled = false; btn.textContent = old;
+    if (res && res.ok) {
+      st.style.color = 'var(--success)'; st.textContent = '✅ Email envoyé à ' + to;
+      document.getElementById('emailSubject').value = '';
+      document.getElementById('emailBody').value = '';
+      setTimeout(closeEmailModal, 1300);
+    } else {
+      st.style.color = 'var(--danger)'; st.textContent = 'Échec : ' + ((res && (res.message || res.error)) || 'erreur inconnue');
+    }
+  }).catch(function () {
+    btn.disabled = false; btn.textContent = old;
+    st.style.color = 'var(--danger)'; st.textContent = 'Impossible de joindre le serveur.';
+  });
+}
+
+/* ============================================================
    BACKEND COLLABORATIF (Google Apps Script + Sheets)
    ============================================================ */
 var Backend = (function () {
@@ -3513,7 +3614,7 @@ var Backend = (function () {
     if (el) return el;
     el = document.createElement('div');
     el.id = 'syncPill';
-    el.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:5000;padding:7px 13px;border-radius:20px;'
+    el.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:5000;padding:7px 13px;border-radius:20px;'
       + 'font:600 12px "Segoe UI",sans-serif;color:#fff;background:#1BA05E;box-shadow:0 4px 14px rgba(0,0,0,.25);'
       + 'transition:opacity .3s,background .3s;opacity:.92;display:flex;align-items:center;gap:7px;';
     document.body.appendChild(el);
