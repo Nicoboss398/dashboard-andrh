@@ -2053,7 +2053,7 @@
   .btn-add-member:hover { opacity: 0.85; }
 
   /* ===== MEMBER MINI-MODAL ===== */
-  #memberModalBackdrop {
+  #memberModalBackdrop, #axeModalBackdrop {
     display: none;
     position: fixed;
     inset: 0;
@@ -2062,8 +2062,8 @@
     align-items: center;
     justify-content: center;
   }
-  #memberModalBackdrop.open { display: flex; }
-  #memberModal {
+  #memberModalBackdrop.open, #axeModalBackdrop.open { display: flex; }
+  #memberModal, #axeModal {
     background: #fff;
     border-radius: 14px;
     padding: 24px;
@@ -2650,15 +2650,12 @@
 
     <div class="form-group">
       <label class="form-label">Axe de travail *</label>
-      <select class="form-control" id="fPhase" required>
-        <option value="">— Sélectionner un axe —</option>
-        <option value="1">1. Cadrage &amp; gouvernance</option>
-        <option value="2">2. Diagnostic &amp; veille RH/IA</option>
-        <option value="3">3. Groupes thématiques</option>
-        <option value="4">4. Production des livrables</option>
-        <option value="5">5. Communication &amp; partage</option>
-        <option value="6">6. Évaluation &amp; bilan</option>
-      </select>
+      <div class="owner-row">
+        <select class="form-control" id="fPhase" required>
+          <option value="">— Sélectionner un axe —</option>
+        </select>
+        <button type="button" class="btn-add-member" onclick="openAxeModal()" title="Gérer les axes de travail">+</button>
+      </div>
     </div>
 
     <div class="form-group">
@@ -2910,6 +2907,29 @@
   </div>
 </div>
 
+<!-- ===== MODAL: Gérer les axes de travail ===== -->
+<div id="axeModalBackdrop" onclick="closeAxeModalOutside(event)">
+  <div id="axeModal">
+    <div class="modal-title" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;gap:8px">🧭 Axes de travail</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Ajoutez, renommez ou supprimez les axes (lots) de votre projet. Le renommage met à jour partout.</div>
+
+    <div id="axeList" style="margin-bottom:14px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:#fafcff;min-height:38px"></div>
+
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">➕ Nouvel axe</div>
+      <div class="form-group">
+        <label class="form-label">Nom de l'axe *</label>
+        <input class="form-control" type="text" id="axeName" placeholder="Ex : Suivi post-événement" onkeydown="if(event.key==='Enter'){event.preventDefault();addAxe();}">
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn-secondary" onclick="closeAxeModal()">Fermer</button>
+      <button class="btn-primary" onclick="addAxe()">✅ Ajouter</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ===== MODAL : Ajouter un document ===== -->
 <div class="modal-backdrop" id="addDocBackdrop" onclick="closeAddDocOutside(event)">
@@ -3066,14 +3086,29 @@ let shareMode = false;
 let expandedTasks = new Set(); // indices des actions développées
 let editSubtasks  = [];        // sous-actions temporaires dans la modale
 
-const PHASES = {
-  '1': 'Cadrage & gouvernance',
-  '2': 'Diagnostic & veille RH/IA',
-  '3': 'Groupes thématiques',
-  '4': 'Production des livrables',
-  '5': 'Communication & partage',
-  '6': 'Évaluation & bilan'
-};
+const DEFAULT_AXES = [
+  { key:'0', name:'Cadrage & gouvernance' },
+  { key:'1', name:'Conception pédagogique' },
+  { key:'2', name:'Livrables & take-away' },
+  { key:'3', name:'Intervenants' },
+  { key:'4', name:'Logistique & lieu' },
+  { key:'5', name:'Communication & inscriptions' },
+  { key:'6', name:'Préparation jour J' },
+  { key:'7', name:'Suivi post-événement' }
+];
+let axes = DEFAULT_AXES.map(function(a){ return { key:String(a.key), name:a.name }; });
+let PHASES = {};
+function rebuildPhases(){ PHASES = {}; axes.forEach(function(a){ PHASES[String(a.key)] = a.name; }); }
+function rebuildResCategories(){
+  if (typeof RES_CATEGORIES === 'undefined') return;
+  RES_CATEGORIES = {};
+  axes.forEach(function(a){ RES_CATEGORIES[String(a.key)] = a.name; });
+  RES_CATEGORIES.ref = 'Réglementation & normes';
+  RES_CATEGORIES.tpl = 'Templates & modèles';
+  RES_CATEGORIES.ext = 'Ressources externes';
+}
+function rebuildAxeDerived(){ rebuildPhases(); rebuildResCategories(); }
+rebuildPhases();
 
 const STATUS_LABELS = { todo:'À faire', inprogress:'En cours', done:'Terminé', blocked:'Bloqué' };
 const STATUS_PILLS  = { todo:'pill-gray', inprogress:'pill-blue', done:'pill-green', blocked:'pill-red' };
@@ -3190,12 +3225,14 @@ var resTypeFilter = 'all';
 var pendingDocFile = null; // { name, size, type, data }
 
 var RES_CATEGORIES = {
-  '1':'Cadrage & gouvernance',
-  '2':'Diagnostic & veille RH/IA',
-  '3':'Groupes thématiques',
-  '4':'Production des livrables',
-  '5':'Communication & partage',
-  '6':'Évaluation & bilan',
+  '0':'Cadrage & gouvernance',
+  '1':'Conception pédagogique',
+  '2':'Livrables & take-away',
+  '3':'Intervenants',
+  '4':'Logistique & lieu',
+  '5':'Communication & inscriptions',
+  '6':'Préparation jour J',
+  '7':'Suivi post-événement',
   'ref':'Réglementation & normes',
   'tpl':'Templates & modèles',
   'ext':'Ressources externes'
@@ -3843,6 +3880,10 @@ var Backend = (function () {
     });
     resources = (d.resources || []).map(function (r) { return r; });
     messages = (d.messages || []).map(function (m) { return m; });
+    if (d.axes && d.axes.length) {
+      axes = d.axes.map(function (a) { return { key: String(a.key), name: a.name }; });
+    }
+    rebuildAxeDerived();
 
     var curId = null;
     try { curId = localStorage.getItem(CUR_KEY); } catch (e) {}
@@ -3883,7 +3924,7 @@ var Backend = (function () {
 
   /* ---- Sauvegarde (état complet, debounce) ---- */
   function snapshot() {
-    return { projects: projects, members: members, resources: resources };
+    return { projects: projects, members: members, resources: resources, axes: axes };
   }
   function scheduleSync(now) {
     try { if (currentProject) localStorage.setItem(CUR_KEY, currentProject.id); } catch (e) {}
@@ -3988,6 +4029,7 @@ function saveToStorage() {
     localStorage.setItem('andrh_dashboard_v1', JSON.stringify({
       projects,
       members,
+      axes,
       currentProjectId: currentProject ? currentProject.id : null
     }));
   } catch(e) {}
@@ -4002,6 +4044,10 @@ function loadFromStorage() {
       const data = JSON.parse(raw);
       projects = data.projects || [];
       members  = data.members  || [];
+      if (data.axes && data.axes.length) {
+        axes = data.axes.map(function(a){ return { key:String(a.key), name:a.name }; });
+      }
+      rebuildAxeDerived();
       const cp = projects.find(p => p.id === data.currentProjectId);
       currentProject = cp || projects[0] || null;
       tasks = currentProject ? currentProject.tasks : [];
@@ -4085,6 +4131,7 @@ function showView(id, btn) {
    RENDER ALL
    ============================================================ */
 function renderAll() {
+  populateAxeSelects();
   renderKPIs();
   renderPhaseTable();
   renderTasks();
@@ -4226,7 +4273,7 @@ function renderTasks() {
     return;
   }
 
-  const PHASE_MAP = { '1':'1. Cadrage & gouvernance','2':'2. Diagnostic & veille RH/IA','3':'3. Groupes thématiques','4':'4. Production des livrables','5':'5. Communication & partage','6':'6. Évaluation & bilan' };
+  const PHASE_MAP = {}; Object.keys(PHASES).forEach(function(k){ PHASE_MAP[k] = k + '. ' + PHASES[k]; });
   const PRIO_MAP  = { '':'—', high:'🔴 Haute', med:'🟠 Moyenne', low:'🟢 Basse' };
   const STATUS_MAP= { todo:'À faire', inprogress:'En cours', done:'Terminé', blocked:'Bloqué' };
 
@@ -4477,6 +4524,101 @@ function getMemberById(id) {
   if (id == null || id === '') return null;
   var idStr = String(id);
   return members.find(function(m) { return String(m.id) === idStr; }) || null;
+}
+
+/* ============================================================
+   AXES DE TRAVAIL — liste dynamique (ajout / suppression / renommage)
+   ============================================================ */
+function escAttr(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function _axeOpts(){ return axes.map(function(a){ return '<option value="' + escAttr(a.key) + '">' + escAttr(a.key) + '. ' + escAttr(a.name) + '</option>'; }).join(''); }
+
+/* (Re)peuple tous les menus qui dépendent des axes */
+function populateAxeSelects() {
+  rebuildAxeDerived();
+  var axeOpts = _axeOpts();
+  var extra = '<option value="ref">Réglementation & normes</option><option value="tpl">Templates & modèles</option><option value="ext">Ressources externes</option>';
+  function fill(id, head, withExtra){
+    var el = document.getElementById(id);
+    if (!el) return;
+    var cur = el.value;
+    el.innerHTML = head + axeOpts + (withExtra ? extra : '');
+    el.value = cur;
+  }
+  fill('fPhase',       '<option value="">— Sélectionner un axe —</option>', false);
+  fill('filterPhase',  '<option value="">Tous les axes</option>',           false);
+  fill('resCatFilter', '<option value="">Toutes catégories</option>',       true);
+  fill('docCategory',  '<option value="">— Sans catégorie —</option>',      true);
+  fill('linkCategory', '<option value="">— Sans catégorie —</option>',      true);
+}
+
+function openAxeModal() {
+  if (typeof shareMode !== 'undefined' && shareMode) return;
+  renderAxeList();
+  document.getElementById('axeName').value = '';
+  document.getElementById('axeModalBackdrop').classList.add('open');
+  setTimeout(function(){ var el=document.getElementById('axeName'); if(el) el.focus(); }, 80);
+}
+function closeAxeModal() { document.getElementById('axeModalBackdrop').classList.remove('open'); }
+function closeAxeModalOutside(e){ if (e.target === document.getElementById('axeModalBackdrop')) closeAxeModal(); }
+
+function renderAxeList() {
+  var el = document.getElementById('axeList');
+  if (!el) return;
+  if (!axes.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center">Aucun axe — ajoutez-en un ci-dessous.</div>';
+    return;
+  }
+  el.innerHTML = axes.map(function(a, i){
+    var used = tasks.filter(function(t){ return String(t.phase) === String(a.key); }).length;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bg)">' +
+      '<div style="width:26px;height:26px;border-radius:6px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">' + escAttr(a.key) + '</div>' +
+      '<input class="form-control" style="flex:1;min-width:0;font-size:12px;padding:6px 8px" value="' + escAttr(a.name) + '" onchange="updateAxeName(' + i + ',this.value)" title="Renommer cet axe">' +
+      (used ? '<span style="font-size:10px;color:var(--text-muted);white-space:nowrap">' + used + ' action' + (used>1?'s':'') + '</span>' : '') +
+      '<button onclick="deleteAxe(' + i + ')" style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:11px;flex-shrink:0" title="Supprimer cet axe">🗑️</button>' +
+    '</div>';
+  }).join('');
+}
+
+function updateAxeName(i, val) {
+  if (!axes[i]) return;
+  var v = (val || '').trim();
+  if (!v) { populateAxeSelects(); renderAxeList(); return; }
+  axes[i].name = v;
+  saveToStorage();
+  populateAxeSelects();
+  renderAll();
+  renderAxeList();
+}
+
+function addAxe() {
+  var input = document.getElementById('axeName');
+  var name = (input.value || '').trim();
+  if (!name) { alert('Donnez un nom à l\'axe.'); return; }
+  var max = -1;
+  axes.forEach(function(a){ var n = parseInt(a.key, 10); if (!isNaN(n) && n > max) max = n; });
+  var key = String(max + 1);
+  axes.push({ key: key, name: name });
+  input.value = '';
+  saveToStorage();
+  populateAxeSelects();
+  renderAll();
+  renderAxeList();
+}
+
+function deleteAxe(i) {
+  var a = axes[i];
+  if (!a) return;
+  var used = tasks.filter(function(t){ return String(t.phase) === String(a.key); }).length;
+  var msg = 'Supprimer l\'axe « ' + a.key + '. ' + a.name + ' » ?';
+  if (used) msg += '\n' + used + ' action(s) rattachée(s) à cet axe seront laissées sans axe.';
+  if (!confirm(msg)) return;
+  tasks.forEach(function(t){ if (String(t.phase) === String(a.key)) t.phase = ''; });
+  axes.splice(i, 1);
+  saveToStorage();
+  populateAxeSelects();
+  renderAll();
+  renderAxeList();
 }
 
 /* ============================================================
