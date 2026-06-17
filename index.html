@@ -2828,6 +2828,7 @@
     <div id="npanel-excel" style="display:none">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
         Importez une liste d'actions depuis un fichier Excel ou CSV. Téléchargez d'abord la matrice type, remplissez-la, puis importez-la.
+        <br><strong>Actions secondaires :</strong> mettez « Secondaire » dans la colonne <em>Niveau</em> et indiquez l'<em>ID</em> de la tâche mère dans la colonne <em>Tâche mère</em> (à défaut, la sous-action est rattachée à la dernière tâche mère au-dessus).
       </div>
 
       <!-- Télécharger matrice -->
@@ -2835,7 +2836,7 @@
         <div style="font-size:28px">📥</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:13px;color:var(--navy)">Matrice type Excel/CSV</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Colonnes : Phase, Titre, Statut, Priorité, Responsable, Date début, Date fin, Notes</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Colonnes : ID, Niveau, Tâche mère, Phase, Titre, Statut, Priorité, Responsable, Date début, Date fin, Notes</div>
         </div>
         <button class="btn-secondary" onclick="downloadTemplateMatrix()" style="font-size:12px;flex-shrink:0">⬇️ Télécharger</button>
       </div>
@@ -4656,7 +4657,8 @@ function loadTemplate() {
 function applyTemplate(idx) {
   if (!currentProject) { alert('Sélectionnez ou créez un chantier d\'abord.'); return; }
   TEMPLATES[idx].tasks.forEach(function(t) {
-    tasks.push(Object.assign({}, t, { created: new Date().toISOString(), owner:'', ownerId:null, start:'', end:'', notes:'' }));
+    var subs = (t.subtasks || []).map(function(s){ return { id: Date.now() + '_' + Math.random().toString(36).slice(2,7), title: s.title, status: 'todo' }; });
+    tasks.push(Object.assign({}, t, { created: new Date().toISOString(), owner:'', ownerId:null, start:'', end:'', notes:'', subtasks: subs }));
   });
   saveToStorage(); closeTemplate(); renderAll();
 }
@@ -4742,15 +4744,16 @@ function saveNewTemplate() {
 /* ── Matrice CSV type ── */
 function downloadTemplateMatrix() {
   var csv = [
-    'Phase,Titre,Statut,Priorité,Responsable,"Date début (AAAA-MM-JJ)","Date fin (AAAA-MM-JJ)",Notes',
-    '1,"Cadrage initial du projet",todo,high,"Prénom NOM","2025-01-10","2025-01-20","Réunion de lancement"',
-    '1,"Définir les objectifs",todo,medium,"Prénom NOM","2025-01-15","2025-01-22",""',
-    '2,"Audit des pratiques actuelles",todo,medium,"Prénom NOM","2025-01-23","2025-02-05","Entretiens équipes"',
-    '2,"Analyse des données RH",todo,low,"Prénom NOM","2025-02-06","2025-02-20",""',
-    '3,"Rédiger le rapport",todo,high,"Prénom NOM","2025-02-21","2025-03-07","Synthèse à valider"',
-    '4,"Présentation aux parties prenantes",todo,high,"Prénom NOM","2025-03-10","2025-03-14",""',
-    '5,"Suivi des recommandations",todo,medium,"Prénom NOM","2025-03-17","2025-06-30",""',
-    '6,"Bilan annuel",todo,low,"Prénom NOM","2025-12-01","2025-12-31","Compte-rendu final"'
+    'ID,Niveau,Tâche mère,Phase,Titre,Statut,Priorité,Responsable,"Date début (AAAA-MM-JJ)","Date fin (AAAA-MM-JJ)",Notes',
+    '1,Mère,,1,"Cadrage initial du projet",todo,high,"Prénom NOM","2025-01-10","2025-01-20","Réunion de lancement"',
+    '1.1,Secondaire,1,1,"Définir les objectifs",todo,medium,"Prénom NOM","2025-01-15","2025-01-22","Sous-action rattachée à 1"',
+    '1.2,Secondaire,1,1,"Constituer l\'équipe projet",todo,medium,"Prénom NOM","2025-01-15","2025-01-22","Sous-action rattachée à 1"',
+    '2,Mère,,2,"Audit des pratiques actuelles",todo,medium,"Prénom NOM","2025-01-23","2025-02-05","Entretiens équipes"',
+    '2.1,Secondaire,2,2,"Analyse des données RH",todo,low,"Prénom NOM","2025-02-06","2025-02-20","Sous-action rattachée à 2"',
+    '3,Mère,,3,"Rédiger le rapport",todo,high,"Prénom NOM","2025-02-21","2025-03-07","Synthèse à valider"',
+    '4,Mère,,4,"Présentation aux parties prenantes",todo,high,"Prénom NOM","2025-03-10","2025-03-14",""',
+    '5,Mère,,5,"Suivi des recommandations",todo,medium,"Prénom NOM","2025-03-17","2025-06-30",""',
+    '6,Mère,,6,"Bilan annuel",todo,low,"Prénom NOM","2025-12-01","2025-12-31","Compte-rendu final"'
   ].join('\r\n');
 
   var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
@@ -4817,7 +4820,23 @@ function parseCSVImport(csvText, fileName) {
   var STATUS_MAP = { 'todo':'todo','àfaire':'todo','inprogress':'inprogress','encours':'inprogress','done':'done','terminé':'done','termine':'done','blocked':'blocked','bloqué':'blocked','bloque':'blocked' };
   var PRIO_MAP   = { 'high':'high','haute':'high','haut':'high','medium':'medium','moyen':'medium','moyenne':'medium','low':'low','bas':'low','basse':'low' };
 
-  var imported = [];
+  function colIdx(keys) {
+    for (var k=0;k<keys.length;k++){
+      var idx = headers.findIndex(function(h){ return h.includes(keys[k]); });
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  }
+  // Pré-localiser les colonnes hiérarchie (présentes uniquement dans la nouvelle matrice)
+  var idxNiveau = colIdx(['niveau','typetche','type']);
+  var idxId     = colIdx(['identifiant','id']);
+  var idxParent = colIdx(['tchemre','tachemere','mre','parent','rattach']);
+
+  var imported = [];   // tâches mères (niveau racine)
+  var idMap = {};      // ID texte -> tâche mère
+  var lastMother = null;
+  var subCount = 0;
+
   for (var i = 1; i < lines.length; i++) {
     var cols = parseRow(lines[i]);
     if (!cols.some(function(c){ return c.trim(); })) continue;
@@ -4830,30 +4849,69 @@ function parseCSVImport(csvText, fileName) {
     }
     var rawStatus = col(['statut','status']).toLowerCase().replace(/[^a-z]/g,'');
     var rawPrio   = col(['priorit','priority']).toLowerCase().replace(/[^a-z]/g,'');
-    imported.push({
+    var status    = STATUS_MAP[rawStatus] || 'todo';
+    var title     = col(['titre','title','action','nom']) || ('Action ' + (i));
+    var niveau    = (idxNiveau >= 0 && cols[idxNiveau] ? cols[idxNiveau] : '').toLowerCase().replace(/[^a-z]/g,'');
+    var rowId     = (idxId >= 0 && cols[idxId] ? cols[idxId].trim() : '');
+    var parentRef = (idxParent >= 0 && cols[idxParent] ? cols[idxParent].trim() : '');
+    var isSecondary = /second|sous|enfant|child|sub/.test(niveau);
+
+    if (isSecondary) {
+      var parent = null;
+      if (parentRef) {
+        parent = idMap[parentRef.toLowerCase()] || null;            // par ID
+        if (!parent) {                                              // sinon par titre de la mère
+          for (var p = 0; p < imported.length; p++) {
+            if ((imported[p].title || '').trim().toLowerCase() === parentRef.toLowerCase()) { parent = imported[p]; break; }
+          }
+        }
+      }
+      if (!parent) parent = lastMother;                             // sinon : mère précédente
+      if (parent) {
+        if (!parent.subtasks) parent.subtasks = [];
+        parent.subtasks.push({ id: Date.now() + '_' + i, title: title, status: status });
+        subCount++;
+        continue;
+      }
+      // Aucune mère trouvée : on la traite comme une action normale (sécurité)
+    }
+
+    var mother = {
       phase:    col(['phase','axe']),
-      title:    col(['titre','title','action','nom']) || ('Action ' + (i)),
-      status:   STATUS_MAP[rawStatus] || 'todo',
+      title:    title,
+      status:   status,
       priority: PRIO_MAP[rawPrio] || 'medium',
-      owner:    col(['responsable','owner','owner']),
+      owner:    col(['responsable','owner']),
       start:    col(['dbutdébut','dbut','start','début']) || '',
       end:      col(['fin','end','findate']) || '',
-      notes:    col(['notes','note','commentaire'])
-    });
+      notes:    col(['notes','note','commentaire']),
+      subtasks: []
+    };
+    imported.push(mother);
+    lastMother = mother;
+    if (rowId) idMap[rowId.toLowerCase()] = mother;
   }
 
   _excelImportedTasks = imported;
 
   var prev = document.getElementById('excelPreview');
   prev.style.display = '';
-  prev.innerHTML = '<div style="font-weight:700;color:var(--navy);margin-bottom:6px">' + imported.length + ' action(s) détectées dans <em>' + esc(fileName) + '</em> :</div>'
-    + imported.slice(0,15).map(function(t) {
-        return '<div style="padding:3px 0;border-bottom:1px solid var(--bg);display:flex;gap:8px;align-items:center">'
-          + (t.phase ? '<span style="font-size:9px;background:var(--bg);border-radius:4px;padding:2px 6px;color:var(--text-muted)">' + esc(t.phase) + '</span>' : '')
-          + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.title) + '</span>'
-          + '</div>';
-      }).join('')
-    + (imported.length > 15 ? '<div style="color:var(--text-muted);padding-top:4px;font-size:11px">+ ' + (imported.length-15) + ' autres…</div>' : '');
+  var rows = [];
+  imported.forEach(function(t) {
+    rows.push('<div style="padding:3px 0;border-bottom:1px solid var(--bg);display:flex;gap:8px;align-items:center">'
+      + (t.phase ? '<span style="font-size:9px;background:var(--bg);border-radius:4px;padding:2px 6px;color:var(--text-muted)">' + esc(t.phase) + '</span>' : '')
+      + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">' + esc(t.title) + '</span>'
+      + ((t.subtasks && t.subtasks.length) ? '<span style="font-size:9px;background:var(--navy);color:#fff;border-radius:4px;padding:2px 6px">' + t.subtasks.length + ' s/a</span>' : '')
+      + '</div>');
+    (t.subtasks || []).forEach(function(st) {
+      rows.push('<div style="padding:2px 0 2px 18px;border-bottom:1px solid var(--bg);display:flex;gap:8px;align-items:center;color:var(--text-muted)">'
+        + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">↳ ' + esc(st.title) + '</span></div>');
+    });
+  });
+  prev.innerHTML = '<div style="font-weight:700;color:var(--navy);margin-bottom:6px">' + imported.length + ' action(s)'
+      + (subCount ? ' + ' + subCount + ' sous-action(s)' : '') + ' détectées dans <em>' + esc(fileName) + '</em> :</div>'
+    + rows.slice(0,20).join('')
+    + (rows.length > 20 ? '<div style="color:var(--text-muted);padding-top:4px;font-size:11px">+ ' + (rows.length-20) + ' autres…</div>' : '');
 
   document.getElementById('btnSaveExcelTpl').disabled = false;
   document.getElementById('btnSaveExcelTpl').style.opacity = '1';
@@ -4869,13 +4927,18 @@ function saveExcelTemplate() {
   if (!name) { alert('Donnez un nom au template.'); return; }
 
   var tplTasks = _excelImportedTasks.map(function(t) {
-    return { phase: t.phase||'', title: t.title, status: t.status||'todo', priority: t.priority||'medium' };
+    return {
+      phase: t.phase||'', title: t.title, status: t.status||'todo', priority: t.priority||'medium',
+      subtasks: (t.subtasks||[]).map(function(s){ return { id: s.id, title: s.title, status: s.status||'todo' }; })
+    };
   });
+  var totalSubs = tplTasks.reduce(function(n,t){ return n + (t.subtasks?t.subtasks.length:0); }, 0);
+  var descTpl = 'Importé depuis fichier · ' + tplTasks.length + ' actions' + (totalSubs ? ' · ' + totalSubs + ' sous-actions' : '');
 
-  TEMPLATES.push({ name: name, desc: 'Importé depuis fichier · ' + tplTasks.length + ' actions', tasks: tplTasks });
+  TEMPLATES.push({ name: name, desc: descTpl, tasks: tplTasks });
   try {
     var saved = JSON.parse(localStorage.getItem('andrh_custom_templates_v1') || '[]');
-    saved.push({ name: name, desc: 'Importé depuis fichier', tasks: tplTasks });
+    saved.push({ name: name, desc: descTpl, tasks: tplTasks });
     localStorage.setItem('andrh_custom_templates_v1', JSON.stringify(saved));
   } catch(e) {}
 
