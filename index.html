@@ -611,9 +611,40 @@
 
   .filter-select:focus { border-color: var(--blue); }
 
+  /* Recherche dynamique dans la barre des actions */
+  .task-search {
+    padding: 7px 12px 7px 30px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text);
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%237a8aa0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") no-repeat 9px center;
+    outline: none;
+    min-width: 220px;
+    flex: 1 1 220px;
+    max-width: 340px;
+  }
+  .task-search:focus { border-color: var(--blue); }
+
+  /* Case "tout sélectionner" + bouton suppression groupée */
+  .select-all-wrap {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; user-select: none;
+  }
+  .btn-delete-selected {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 8px;
+    border: 1px solid #F5B5B5; background: #FEE8E8; color: #B42318;
+    font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s;
+  }
+  .btn-delete-selected:hover:not(:disabled) { background: #FBD2D2; }
+  .btn-delete-selected:disabled { opacity: .45; cursor: not-allowed; }
+  .sel-count { font-weight: 800; }
+
   .task-item {
     display: grid;
-    grid-template-columns: 30px 1fr 150px 140px 110px 110px 120px 70px;
+    grid-template-columns: 26px 30px 1fr 150px 140px 110px 110px 120px 70px;
     gap: 8px;
     align-items: center;
     padding: 8px 20px;
@@ -638,6 +669,7 @@
   .task-item.header-row:hover { background: var(--bg); }
 
   .task-cb { accent-color: var(--blue); width: 15px; height: 15px; cursor: pointer; }
+  .row-select { accent-color: var(--danger); width: 15px; height: 15px; cursor: pointer; }
 
   .task-title { font-weight: 500; color: var(--navy); cursor: pointer; }
   .task-title:hover { text-decoration: underline; text-decoration-color: var(--blue); }
@@ -1999,8 +2031,8 @@
     #main { margin-left: 0; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .alert-grid { grid-template-columns: 1fr; }
-    .task-item { grid-template-columns: 30px 1fr 90px 80px; }
-    .task-item > *:nth-child(n+6) { display: none; }
+    .task-item { grid-template-columns: 26px 30px 1fr 90px 80px; }
+    .task-item > *:nth-child(n+7) { display: none; }
     .topnav { overflow-x: auto; max-width: calc(100vw - 120px); }
     .topnav-btn { font-size: 11px; padding: 6px 10px; gap: 4px; }
     .last-update { display: none; }
@@ -2460,6 +2492,8 @@
       </div>
 
       <div class="filters-bar">
+        <input type="text" class="task-search" id="taskSearch" placeholder="Rechercher une action…"
+          oninput="renderTasks()" autocomplete="off">
         <span style="font-size:12px;font-weight:600;color:var(--text-muted)">Filtrer :</span>
         <select class="filter-select" id="filterStatus" onchange="renderTasks()">
           <option value="">Tous les statuts</option>
@@ -2483,9 +2517,19 @@
           <option value="med">Moyenne</option>
           <option value="low">Basse</option>
         </select>
+
+        <label class="select-all-wrap" style="margin-left:auto" title="Tout sélectionner / désélectionner">
+          <input type="checkbox" class="row-select" id="selectAllTasks" onchange="toggleSelectAll(this.checked)">
+          Tout sélectionner
+        </label>
+        <button class="btn-delete-selected" id="btnDeleteSelected" onclick="deleteSelectedTasks()" disabled
+          title="Supprimer les actions sélectionnées">
+          🗑️ Supprimer la sélection <span class="sel-count" id="selCount"></span>
+        </button>
       </div>
 
       <div class="task-item header-row">
+        <div title="Sélection"></div>
         <div></div>
         <div>Action</div>
         <div>Responsable</div>
@@ -3985,7 +4029,7 @@ function init() {
   // Charger templates custom (conservés en local pour cette version)
   try {
     var customTpls = JSON.parse(localStorage.getItem('andrh_custom_templates_v1') || '[]');
-    customTpls.forEach(function(t) { TEMPLATES.push(t); });
+    customTpls.forEach(function(t) { t._custom = true; TEMPLATES.push(t); });
   } catch(e) {}
   updateClock();
   setInterval(updateClock, 1000);
@@ -4077,6 +4121,7 @@ function loadProject() {
     currentProject = p;
     tasks = currentProject.tasks;
     expandedTasks.clear();
+    if (typeof selectedTasks !== 'undefined') selectedTasks.clear();
     saveToStorage();
     renderAll();
   }
@@ -4260,16 +4305,29 @@ function renderTasks() {
   const statusF   = (document.getElementById('filterStatus')   || {}).value || '';
   const phaseF    = (document.getElementById('filterPhase')    || {}).value || '';
   const priorityF = (document.getElementById('filterPriority') || {}).value || '';
+  const searchF   = ((document.getElementById('taskSearch')    || {}).value || '').trim().toLowerCase();
 
   const filtered = tasks.filter(function(t) {
-    return (!statusF   || t.status   === statusF)  &&
-           (!phaseF    || t.phase    === phaseF)   &&
-           (!priorityF || t.priority === priorityF);
+    if (statusF   && t.status   !== statusF)   return false;
+    if (phaseF    && t.phase    !== phaseF)    return false;
+    if (priorityF && t.priority !== priorityF) return false;
+    if (searchF) {
+      var hay = [
+        t.title || '', t.notes || '', t.owner || '',
+        (t.subtasks || []).map(function(s){ return s.title || ''; }).join(' ')
+      ].join(' ').toLowerCase();
+      if (hay.indexOf(searchF) === -1) return false;
+    }
+    return true;
   });
 
   const container = document.getElementById('taskList');
   if (!filtered.length) {
-    container.innerHTML = '<div class="empty-state"><span class="icon">📝</span><p>Aucune action — cliquez sur "Nouvelle action" pour commencer</p></div>';
+    var emptyMsg = (statusF || phaseF || priorityF || searchF)
+      ? 'Aucune action ne correspond à votre recherche ou à vos filtres.'
+      : 'Aucune action — cliquez sur "Nouvelle action" pour commencer';
+    container.innerHTML = '<div class="empty-state"><span class="icon">📝</span><p>' + emptyMsg + '</p></div>';
+    updateSelectionUI();
     return;
   }
 
@@ -4328,7 +4386,11 @@ function renderTasks() {
 
     return '<div class="task-item">' +
 
-      // ① Checkbox
+      // ⓪ Case de sélection (pour suppression groupée)
+      '<input type="checkbox" class="row-select" ' + (selectedTasks.has(idx)?'checked':'') +
+        ' title="Sélectionner cette action" onclick="event.stopPropagation();onRowSelectToggle(' + idx + ',this.checked)">' +
+
+      // ① Checkbox "terminé"
       '<input type="checkbox" class="task-cb" ' + (t.status==='done'?'checked':'') +
         ' onclick="toggleDone(event,' + idx + ')">' +
 
@@ -4377,6 +4439,78 @@ function renderTasks() {
 
     '</div>' + subtaskRowsHtml;
   }).join('');
+
+  updateSelectionUI();
+}
+
+/* ============================================================
+   SÉLECTION MULTIPLE & SUPPRESSION GROUPÉE
+   ============================================================ */
+var selectedTasks = new Set();   // indices (absolus) des actions cochées
+
+/* Liste des indices actuellement visibles (après filtres + recherche) */
+function getVisibleTaskIndices() {
+  const statusF   = (document.getElementById('filterStatus')   || {}).value || '';
+  const phaseF    = (document.getElementById('filterPhase')    || {}).value || '';
+  const priorityF = (document.getElementById('filterPriority') || {}).value || '';
+  const searchF   = ((document.getElementById('taskSearch')    || {}).value || '').trim().toLowerCase();
+  var idxs = [];
+  tasks.forEach(function(t, i) {
+    if (statusF   && t.status   !== statusF)   return;
+    if (phaseF    && t.phase    !== phaseF)    return;
+    if (priorityF && t.priority !== priorityF) return;
+    if (searchF) {
+      var hay = [t.title||'', t.notes||'', t.owner||'',
+        (t.subtasks||[]).map(function(s){return s.title||'';}).join(' ')].join(' ').toLowerCase();
+      if (hay.indexOf(searchF) === -1) return;
+    }
+    idxs.push(i);
+  });
+  return idxs;
+}
+
+function onRowSelectToggle(idx, checked) {
+  if (checked) selectedTasks.add(idx); else selectedTasks.delete(idx);
+  updateSelectionUI();
+}
+
+function toggleSelectAll(checked) {
+  var visible = getVisibleTaskIndices();
+  if (checked) visible.forEach(function(i){ selectedTasks.add(i); });
+  else         visible.forEach(function(i){ selectedTasks.delete(i); });
+  renderTasks();
+}
+
+/* Met à jour la case "tout sélectionner", le compteur et l'état du bouton */
+function updateSelectionUI() {
+  // Ne conserver que les sélections encore valides
+  selectedTasks.forEach(function(i){ if (i < 0 || i >= tasks.length) selectedTasks.delete(i); });
+
+  var btn   = document.getElementById('btnDeleteSelected');
+  var count = document.getElementById('selCount');
+  var all   = document.getElementById('selectAllTasks');
+  var n = selectedTasks.size;
+  if (count) count.textContent = n ? '(' + n + ')' : '';
+  if (btn)   btn.disabled = (n === 0);
+  if (all) {
+    var visible = getVisibleTaskIndices();
+    var selVisible = visible.filter(function(i){ return selectedTasks.has(i); }).length;
+    all.checked = visible.length > 0 && selVisible === visible.length;
+    all.indeterminate = selVisible > 0 && selVisible < visible.length;
+  }
+}
+
+function deleteSelectedTasks() {
+  var n = selectedTasks.size;
+  if (!n) return;
+  if (!confirm('Supprimer définitivement ' + n + ' action' + (n>1?'s':'') + ' sélectionnée' + (n>1?'s':'') + ' ?')) return;
+  // Suppression en place (du plus grand index au plus petit) pour préserver
+  // la référence tasks === currentProject.tasks
+  var toDelete = Array.from(selectedTasks).sort(function(a,b){ return b - a; });
+  toDelete.forEach(function(i){ if (i >= 0 && i < tasks.length) tasks.splice(i, 1); });
+  selectedTasks.clear();
+  expandedTasks.clear();
+  saveToStorage(); renderAll();
 }
 
 /* Met à jour un champ d'une tâche directement depuis la ligne */
@@ -4791,9 +4925,36 @@ const TEMPLATES = [{
 function loadTemplate() {
   const list = document.getElementById('templateList');
   list.innerHTML = TEMPLATES.map(function(tpl, i) {
-    return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px"><div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:4px">' + tpl.name + '</div><div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">' + tpl.desc + ' — ' + tpl.tasks.length + ' actions</div><button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="applyTemplate(' + i + ')">📥 Charger ce template</button></div>';
+    var badge = tpl._custom
+      ? '<span style="font-size:9.5px;font-weight:700;background:var(--gradient-soft);color:var(--blue);border:1px solid var(--blue-light);border-radius:10px;padding:1px 8px;margin-left:6px">Créé</span>'
+      : '';
+    var delBtn = tpl._custom
+      ? '<button onclick="deleteTemplate(' + i + ')" style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:700;color:#B42318" title="Supprimer ce template">🗑️ Supprimer</button>'
+      : '';
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">' +
+      '<div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:4px;display:flex;align-items:center">' + esc(tpl.name) + badge + '</div>' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">' + esc(tpl.desc || '') + ' — ' + tpl.tasks.length + ' actions</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="applyTemplate(' + i + ')">📥 Charger ce template</button>' +
+        delBtn +
+      '</div></div>';
   }).join('');
   document.getElementById('templateBackdrop').classList.add('open');
+}
+
+/* Supprime un template personnalisé (les templates par défaut ne sont pas supprimables) */
+function deleteTemplate(i) {
+  var tpl = TEMPLATES[i];
+  if (!tpl || !tpl._custom) { alert('Ce template par défaut ne peut pas être supprimé.'); return; }
+  if (!confirm('Supprimer le template « ' + tpl.name + ' » ? (les actions déjà chargées dans vos chantiers ne sont pas affectées)')) return;
+  TEMPLATES.splice(i, 1);
+  // Reconstruire la liste des templates personnalisés dans localStorage
+  try {
+    var custom = TEMPLATES.filter(function(t){ return t._custom; })
+      .map(function(t){ return { name: t.name, desc: t.desc, tasks: t.tasks }; });
+    localStorage.setItem('andrh_custom_templates_v1', JSON.stringify(custom));
+  } catch(e) {}
+  loadTemplate();
 }
 
 function applyTemplate(idx) {
@@ -4871,7 +5032,7 @@ function saveNewTemplate() {
     return { phase: t.phase||'', title: t.title, status: 'todo', priority: t.priority||'medium' };
   });
 
-  TEMPLATES.push({ name: name, desc: desc || 'Template personnalisé', tasks: tplTasks });
+  TEMPLATES.push({ name: name, desc: desc || 'Template personnalisé', tasks: tplTasks, _custom: true });
   // Sauvegarder les templates custom dans localStorage
   try {
     var saved = JSON.parse(localStorage.getItem('andrh_custom_templates_v1') || '[]');
@@ -5077,7 +5238,7 @@ function saveExcelTemplate() {
   var totalSubs = tplTasks.reduce(function(n,t){ return n + (t.subtasks?t.subtasks.length:0); }, 0);
   var descTpl = 'Importé depuis fichier · ' + tplTasks.length + ' actions' + (totalSubs ? ' · ' + totalSubs + ' sous-actions' : '');
 
-  TEMPLATES.push({ name: name, desc: descTpl, tasks: tplTasks });
+  TEMPLATES.push({ name: name, desc: descTpl, tasks: tplTasks, _custom: true });
   try {
     var saved = JSON.parse(localStorage.getItem('andrh_custom_templates_v1') || '[]');
     saved.push({ name: name, desc: descTpl, tasks: tplTasks });
