@@ -644,7 +644,7 @@
 
   .task-item {
     display: grid;
-    grid-template-columns: 26px 30px 1fr 150px 140px 110px 110px 120px 70px;
+    grid-template-columns: 26px 1fr 190px 175px 110px 110px 120px 70px;
     gap: 8px;
     align-items: center;
     padding: 8px 20px;
@@ -2031,8 +2031,8 @@
     #main { margin-left: 0; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .alert-grid { grid-template-columns: 1fr; }
-    .task-item { grid-template-columns: 26px 30px 1fr 90px 80px; }
-    .task-item > *:nth-child(n+7) { display: none; }
+    .task-item { grid-template-columns: 26px 1fr 110px 100px; }
+    .task-item > *:nth-child(n+5) { display: none; }
     .topnav { overflow-x: auto; max-width: calc(100vw - 120px); }
     .topnav-btn { font-size: 11px; padding: 6px 10px; gap: 4px; }
     .last-update { display: none; }
@@ -2435,7 +2435,7 @@
     <!-- Avancement par axe (droite) -->
     <div class="section-card" style="flex:1 1 360px;min-width:300px;margin-bottom:0;display:flex;flex-direction:column">
       <div class="section-header">
-        <div class="section-title"><span class="icon">📊</span> Avancement par axe de travail</div>
+        <div class="section-title"><span class="icon">📊</span> Avancement par phase</div>
       </div>
       <!-- Table limitée en hauteur -->
       <div class="phase-table-shell" id="phaseTableShell">
@@ -2443,7 +2443,7 @@
           <table>
             <thead>
               <tr>
-                <th>Axe de travail</th>
+                <th>Phase</th>
                 <th>Total</th>
                 <th>Terminées</th>
                 <th style="width:180px">Progression</th>
@@ -2453,7 +2453,7 @@
             <tbody id="phaseTableBody">
               <tr>
                 <td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">
-                  Aucune action saisie — ajoutez des actions pour voir l'avancement par axe
+                  Aucune action saisie — ajoutez des actions pour voir l'avancement par phase
                 </td>
               </tr>
             </tbody>
@@ -2503,7 +2503,7 @@
           <option value="blocked">Bloqué</option>
         </select>
         <select class="filter-select" id="filterPhase" onchange="renderTasks()">
-          <option value="">Tous les axes</option>
+          <option value="">Toutes les phases</option>
           <option value="1">1. Cadrage &amp; gouvernance</option>
           <option value="2">2. Diagnostic &amp; veille RH/IA</option>
           <option value="3">3. Groupes thématiques</option>
@@ -2530,10 +2530,9 @@
 
       <div class="task-item header-row">
         <div title="Sélection"></div>
-        <div></div>
         <div>Action</div>
         <div>Responsable</div>
-        <div>Axe</div>
+        <div>Phase</div>
         <div>Échéance</div>
         <div>Priorité</div>
         <div>Statut</div>
@@ -2594,7 +2593,7 @@
 
       <!-- Avancement par axe -->
       <div class="chart-card">
-        <div class="chart-title">Avancement par axe de travail</div>
+        <div class="chart-title">Avancement par phase</div>
         <div class="bar-chart" id="phaseChart">
           <div class="empty-state" style="padding:20px 0"><p>Ajoutez des actions pour voir l'avancement</p></div>
         </div>
@@ -2693,12 +2692,12 @@
     <div class="modal-title">➕ <span id="modalTitleText">Nouvelle action</span></div>
 
     <div class="form-group">
-      <label class="form-label">Axe de travail *</label>
+      <label class="form-label">Phase *</label>
       <div class="owner-row">
         <select class="form-control" id="fPhase" required>
-          <option value="">— Sélectionner un axe —</option>
+          <option value="">— Sélectionner une phase —</option>
         </select>
-        <button type="button" class="btn-add-member" onclick="openAxeModal()" title="Gérer les axes de travail">+</button>
+        <button type="button" class="btn-add-member" onclick="openAxeModal()" title="Gérer les phases">+</button>
       </div>
     </div>
 
@@ -2951,18 +2950,18 @@
   </div>
 </div>
 
-<!-- ===== MODAL: Gérer les axes de travail ===== -->
+<!-- ===== MODAL: Gérer les phases ===== -->
 <div id="axeModalBackdrop" onclick="closeAxeModalOutside(event)">
   <div id="axeModal">
-    <div class="modal-title" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;gap:8px">🧭 Axes de travail</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Ajoutez, renommez ou supprimez les axes (lots) de votre projet. Le renommage met à jour partout.</div>
+    <div class="modal-title" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;gap:8px">🧭 Phases</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Ajoutez, renommez ou supprimez les phases (lots) de votre projet. Le renommage met à jour partout.</div>
 
     <div id="axeList" style="margin-bottom:14px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:#fafcff;min-height:38px"></div>
 
     <div style="border-top:1px solid var(--border);padding-top:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">➕ Nouvel axe</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">➕ Nouvelle phase</div>
       <div class="form-group">
-        <label class="form-label">Nom de l'axe *</label>
+        <label class="form-label">Nom de la phase *</label>
         <input class="form-control" type="text" id="axeName" placeholder="Ex : Suivi post-événement" onkeydown="if(event.key==='Enter'){event.preventDefault();addAxe();}">
       </div>
     </div>
@@ -3094,14 +3093,14 @@
 <div id="phaseExpandBackdrop" onclick="closePhaseExpand(event)">
   <div id="phaseExpandModal">
     <div class="phase-expand-header">
-      <div class="phase-expand-title">📊 Avancement par axe de travail — Vue complète</div>
+      <div class="phase-expand-title">📊 Avancement par phase — Vue complète</div>
       <button class="btn-close-expand" onclick="closePhaseExpandDirect()">✕ Fermer</button>
     </div>
     <div id="phaseExpandTable">
       <table style="width:100%">
         <thead>
           <tr>
-            <th>Axe de travail</th>
+            <th>Phase</th>
             <th>Total</th>
             <th>Terminées</th>
             <th style="width:220px">Progression</th>
@@ -4242,7 +4241,7 @@ function renderKPIs() {
 function renderPhaseTable() {
   const body = document.getElementById('phaseTableBody');
   if (!tasks.length) {
-    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Aucune action saisie — ajoutez des actions pour voir l\'avancement par axe</td></tr>';
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Aucune action saisie — ajoutez des actions pour voir l\'avancement par phase</td></tr>';
     return;
   }
   const phases = {};
@@ -4257,7 +4256,7 @@ function renderPhaseTable() {
     const d = phases[ph];
     const pct = Math.round(d.done / d.total * 100);
     const color = colors[i % colors.length];
-    const label = PHASES[ph] || ('Axe ' + ph);
+    const label = PHASES[ph] || ('Phase ' + ph);
     let pillClass = 'pill-gray', pillTxt = 'Non démarré';
     if (pct === 100) { pillClass = 'pill-green'; pillTxt = 'Terminé'; }
     else if (pct > 0) { pillClass = 'pill-blue';  pillTxt = 'En cours'; }
@@ -4390,11 +4389,7 @@ function renderTasks() {
       '<input type="checkbox" class="row-select" ' + (selectedTasks.has(idx)?'checked':'') +
         ' title="Sélectionner cette action" onclick="event.stopPropagation();onRowSelectToggle(' + idx + ',this.checked)">' +
 
-      // ① Checkbox "terminé"
-      '<input type="checkbox" class="task-cb" ' + (t.status==='done'?'checked':'') +
-        ' onclick="toggleDone(event,' + idx + ')">' +
-
-      // ② Titre + expand toggle + badge sous-actions
+      // ① Titre + expand toggle + badge sous-actions
       '<div class="task-title" onclick="editTask(event,' + idx + ')" style="display:flex;flex-direction:column;justify-content:center">' +
         '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">' +
           expandBtn +
@@ -4413,9 +4408,9 @@ function renderTasks() {
         '<button class="btn-add-member-inline" onclick="event.stopPropagation();openMemberModal()" title="Ajouter un responsable">＋</button>' +
       '</div>' +
 
-      // ④ Axe
+      // ③ Phase
       '<select class="inline-select" onclick="event.stopPropagation()" onchange="updateTaskField(' + idx + ',\'phase\',this.value)">' +
-        _opts(PHASE_MAP, t.phase, '— Axe —') +
+        _opts(PHASE_MAP, t.phase, '— Phase —') +
       '</select>' +
 
       // ⑤ Échéance
@@ -4679,8 +4674,8 @@ function populateAxeSelects() {
     el.innerHTML = head + axeOpts + (withExtra ? extra : '');
     el.value = cur;
   }
-  fill('fPhase',       '<option value="">— Sélectionner un axe —</option>', false);
-  fill('filterPhase',  '<option value="">Tous les axes</option>',           false);
+  fill('fPhase',       '<option value="">— Sélectionner une phase —</option>', false);
+  fill('filterPhase',  '<option value="">Toutes les phases</option>',           false);
   fill('resCatFilter', '<option value="">Toutes catégories</option>',       true);
   fill('docCategory',  '<option value="">— Sans catégorie —</option>',      true);
   fill('linkCategory', '<option value="">— Sans catégorie —</option>',      true);
@@ -4700,16 +4695,16 @@ function renderAxeList() {
   var el = document.getElementById('axeList');
   if (!el) return;
   if (!axes.length) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center">Aucun axe — ajoutez-en un ci-dessous.</div>';
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center">Aucune phase — ajoutez-en une ci-dessous.</div>';
     return;
   }
   el.innerHTML = axes.map(function(a, i){
     var used = tasks.filter(function(t){ return String(t.phase) === String(a.key); }).length;
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bg)">' +
       '<div style="width:26px;height:26px;border-radius:6px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">' + escAttr(a.key) + '</div>' +
-      '<input class="form-control" style="flex:1;min-width:0;font-size:12px;padding:6px 8px" value="' + escAttr(a.name) + '" onchange="updateAxeName(' + i + ',this.value)" title="Renommer cet axe">' +
+      '<input class="form-control" style="flex:1;min-width:0;font-size:12px;padding:6px 8px" value="' + escAttr(a.name) + '" onchange="updateAxeName(' + i + ',this.value)" title="Renommer cette phase">' +
       (used ? '<span style="font-size:10px;color:var(--text-muted);white-space:nowrap">' + used + ' action' + (used>1?'s':'') + '</span>' : '') +
-      '<button onclick="deleteAxe(' + i + ')" style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:11px;flex-shrink:0" title="Supprimer cet axe">🗑️</button>' +
+      '<button onclick="deleteAxe(' + i + ')" style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:11px;flex-shrink:0" title="Supprimer cette phase">🗑️</button>' +
     '</div>';
   }).join('');
 }
@@ -4728,7 +4723,7 @@ function updateAxeName(i, val) {
 function addAxe() {
   var input = document.getElementById('axeName');
   var name = (input.value || '').trim();
-  if (!name) { alert('Donnez un nom à l\'axe.'); return; }
+  if (!name) { alert('Donnez un nom à la phase.'); return; }
   var max = -1;
   axes.forEach(function(a){ var n = parseInt(a.key, 10); if (!isNaN(n) && n > max) max = n; });
   var key = String(max + 1);
@@ -4744,8 +4739,8 @@ function deleteAxe(i) {
   var a = axes[i];
   if (!a) return;
   var used = tasks.filter(function(t){ return String(t.phase) === String(a.key); }).length;
-  var msg = 'Supprimer l\'axe « ' + a.key + '. ' + a.name + ' » ?';
-  if (used) msg += '\n' + used + ' action(s) rattachée(s) à cet axe seront laissées sans axe.';
+  var msg = 'Supprimer la phase « ' + a.key + '. ' + a.name + ' » ?';
+  if (used) msg += '\n' + used + ' action(s) rattachée(s) à cette phase seront laissées sans phase.';
   if (!confirm(msg)) return;
   tasks.forEach(function(t){ if (String(t.phase) === String(a.key)) t.phase = ''; });
   axes.splice(i, 1);
@@ -4797,7 +4792,7 @@ function editTask(eventOrIdx, idx) {
 function saveTask() {
   const phase = document.getElementById('fPhase').value;
   const title = document.getElementById('fTitle').value.trim();
-  if (!phase) { alert('Veuillez sélectionner un axe de travail.'); return; }
+  if (!phase) { alert('Veuillez sélectionner une phase.'); return; }
   if (!title) { alert("Le titre de l'action est obligatoire."); return; }
   const ownerId = document.getElementById('fOwner').value || null;
   const member  = ownerId ? getMemberById(ownerId) : null;
@@ -5101,25 +5096,50 @@ function handleExcelImport(e) {
 }
 
 function parseCSVImport(csvText, fileName) {
-  var lines = csvText.split(/\r?\n/).filter(function(l){ return l.trim(); });
-  if (lines.length < 2) { alert('Fichier vide ou invalide'); return; }
+  if (!csvText || !csvText.trim()) { alert('Fichier vide ou invalide'); return; }
 
-  // Détecter séparateur
-  var sep = lines[0].includes(';') ? ';' : ',';
+  // Détecter le séparateur : celui le plus fréquent sur le début du fichier
+  var head = csvText.slice(0, 4000);
+  var sep = ((head.match(/;/g) || []).length > (head.match(/,/g) || []).length) ? ';' : ',';
 
-  function parseRow(line) {
-    var result = [], field = '', inQ = false;
-    for (var i = 0; i < line.length; i++) {
-      var c = line[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === sep && !inQ) { result.push(field.trim()); field = ''; }
-      else { field += c; }
+  // Vrai parseur CSV : gère les guillemets, les "" échappés ET les sauts de
+  // ligne À L'INTÉRIEUR d'un champ entre guillemets (notes multi-lignes, etc.).
+  function parseCSV(text) {
+    var rows = [], row = [], field = '', inQ = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQ) {
+        if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else inQ = false; }
+        else field += c;
+      } else {
+        if (c === '"') inQ = true;
+        else if (c === sep) { row.push(field); field = ''; }
+        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+        else if (c === '\r') { /* ignorer */ }
+        else field += c;
+      }
     }
-    result.push(field.trim());
-    return result;
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows;
   }
 
-  var headers = parseRow(lines[0]).map(function(h){ return h.toLowerCase().replace(/[^a-z]/g,''); });
+  var allRows = parseCSV(csvText)
+    .map(function(r){ return r.map(function(c){ return (c || '').trim(); }); })
+    .filter(function(r){ return r.some(function(c){ return c; }); });   // sauter lignes vides
+  if (allRows.length < 2) { alert('Fichier vide ou invalide'); return; }
+
+  // Repérer la VRAIE ligne d'en-tête : certaines matrices ont un titre fusionné
+  // ou des lignes vides en haut. On cherche la ligne qui contient au moins deux
+  // intitulés de colonne reconnus (titre, statut, phase, priorité, responsable…).
+  var HEADER_TOKENS = ['titre','title','action','statut','status','phase','priorit','priority','responsable','owner','niveau','echeance','chance','notes'];
+  var headerLineIdx = 0;
+  for (var hl = 0; hl < Math.min(allRows.length, 15); hl++) {
+    var joined = allRows[hl].map(function(c){ return c.toLowerCase().replace(/[^a-z]/g,''); }).join('|');
+    var hits = HEADER_TOKENS.filter(function(k){ return joined.indexOf(k) >= 0; }).length;
+    if (hits >= 2) { headerLineIdx = hl; break; }
+  }
+
+  var headers = allRows[headerLineIdx].map(function(h){ return h.toLowerCase().replace(/[^a-z]/g,''); });
   var STATUS_MAP = { 'todo':'todo','àfaire':'todo','inprogress':'inprogress','encours':'inprogress','done':'done','terminé':'done','termine':'done','blocked':'blocked','bloqué':'blocked','bloque':'blocked' };
   var PRIO_MAP   = { 'high':'high','haute':'high','haut':'high','medium':'medium','moyen':'medium','moyenne':'medium','low':'low','bas':'low','basse':'low' };
 
@@ -5140,8 +5160,8 @@ function parseCSVImport(csvText, fileName) {
   var lastMother = null;
   var subCount = 0;
 
-  for (var i = 1; i < lines.length; i++) {
-    var cols = parseRow(lines[i]);
+  for (var i = headerLineIdx + 1; i < allRows.length; i++) {
+    var cols = allRows[i];
     if (!cols.some(function(c){ return c.trim(); })) continue;
     function col(keys) {
       for (var k=0;k<keys.length;k++){
