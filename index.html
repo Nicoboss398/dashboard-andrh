@@ -644,7 +644,7 @@
 
   .task-item {
     display: grid;
-    grid-template-columns: 26px 1fr 190px 175px 110px 110px 120px 70px;
+    grid-template-columns: 22px 26px 1fr 190px 175px 110px 110px 120px 70px;
     gap: 8px;
     align-items: center;
     padding: 8px 20px;
@@ -670,6 +670,55 @@
 
   .task-cb { accent-color: var(--blue); width: 15px; height: 15px; cursor: pointer; }
   .row-select { accent-color: var(--danger); width: 15px; height: 15px; cursor: pointer; }
+
+  /* Poignée de déplacement (réordonner les actions) */
+  .drag-handle {
+    cursor: grab; color: var(--text-muted); font-size: 13px; line-height: 1;
+    user-select: none; text-align: center; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .task-item.drag-over { box-shadow: inset 0 2px 0 var(--blue); }
+  .task-item.dragging { opacity: .5; }
+
+  /* Responsables multiples — pastilles + bouton */
+  .owner-pick-btn {
+    display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+    flex: 1; min-width: 0; background: #fff; border: 1px solid var(--border);
+    border-radius: 8px; padding: 3px 6px; cursor: pointer; min-height: 28px;
+    font-size: 11px; color: var(--text); text-align: left;
+  }
+  .owner-pick-btn:hover { border-color: var(--blue); }
+  .owner-chip {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--gradient);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  /* Popover de sélection des responsables */
+  #ownerPicker {
+    position: absolute; z-index: 4000; display: none; min-width: 210px; max-width: 280px;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,25,92,0.18); padding: 8px; font-size: 12.5px;
+  }
+  #ownerPicker .owner-pop-head { font-weight: 700; color: var(--navy); font-size: 12px; padding: 2px 4px 8px; }
+  #ownerPicker .owner-pop-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 6px;
+    cursor: pointer; color: var(--text);
+  }
+  #ownerPicker .owner-pop-item:hover { background: var(--gradient-soft); }
+  #ownerPicker .owner-pop-item input { accent-color: var(--blue); width: 15px; height: 15px; }
+  #ownerPicker .owner-pop-empty { color: var(--text-muted); padding: 8px 6px; font-size: 12px; }
+  #ownerPicker .owner-pop-foot { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
+  #ownerPicker .owner-pop-foot button { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 11.5px; color: var(--navy); }
+  #ownerPicker .owner-pop-foot button:hover { background: var(--gradient-soft); }
+  /* Liste de cases à cocher des responsables (modale action) */
+  .owner-checklist {
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+    max-height: 150px; overflow-y: auto; background: #fafcff;
+  }
+  .owner-checklist label { display: flex; align-items: center; gap: 8px; padding: 5px 2px; cursor: pointer; font-size: 13px; }
+  .owner-checklist input { accent-color: var(--blue); width: 15px; height: 15px; }
+  .owner-checklist .owner-empty { color: var(--text-muted); font-size: 12px; padding: 6px 2px; }
 
   .task-title { font-weight: 500; color: var(--navy); cursor: pointer; }
   .task-title:hover { text-decoration: underline; text-decoration-color: var(--blue); }
@@ -2031,7 +2080,7 @@
     #main { margin-left: 0; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .alert-grid { grid-template-columns: 1fr; }
-    .task-item { grid-template-columns: 26px 1fr 110px 100px; }
+    .task-item { grid-template-columns: 22px 26px 1fr 100px; }
     .task-item > *:nth-child(n+5) { display: none; }
     .topnav { overflow-x: auto; max-width: calc(100vw - 120px); }
     .topnav-btn { font-size: 11px; padding: 6px 10px; gap: 4px; }
@@ -2529,14 +2578,15 @@
       </div>
 
       <div class="task-item header-row">
+        <div title="Déplacer"></div>
         <div title="Sélection"></div>
-        <div>Action</div>
-        <div>Responsable</div>
+        <div>Actions</div>
+        <div>Responsables</div>
         <div>Phase</div>
         <div>Échéance</div>
         <div>Priorité</div>
         <div>Statut</div>
-        <div>Actions</div>
+        <div>Gérer</div>
       </div>
       <div id="taskList"></div>
     </div>
@@ -2707,11 +2757,9 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label">Responsable</label>
-      <div class="owner-row">
-        <select class="form-control" id="fOwner">
-          <option value="">— Non assigné —</option>
-        </select>
+      <label class="form-label">Responsables <span style="font-weight:400;color:var(--text-muted);font-size:11px">(plusieurs possibles)</span></label>
+      <div class="owner-row" style="align-items:flex-start">
+        <div class="owner-checklist" id="fOwnerList" style="flex:1"></div>
         <button type="button" class="btn-add-member" onclick="openMemberModal()" title="Ajouter un responsable">+</button>
       </div>
     </div>
@@ -3924,6 +3972,7 @@ var Backend = (function () {
       var task = {
         id: t.id, phase: String(t.phase || ''), title: t.title,
         ownerId: t.ownerId === '' ? null : t.ownerId, owner: t.owner || '',
+        ownerIds: _reconstructOwnerIds(t),
         status: t.status || 'todo', start: t.start || '', end: t.end || '',
         priority: t.priority || '', notes: t.notes || '', created: t.created || '',
         subtasks: subs
@@ -4309,6 +4358,159 @@ function _memberOpts(selectedId) {
   return html;
 }
 
+/* ============================================================
+   RESPONSABLES MULTIPLES (plusieurs par action)
+   ============================================================ */
+/* Renvoie toujours un tableau d'IDs (migre l'ancien champ ownerId) */
+function getOwnerIds(t) {
+  if (!t) return [];
+  if (Array.isArray(t.ownerIds)) return t.ownerIds.slice();
+  if (t.ownerId != null && t.ownerId !== '') return [t.ownerId];
+  return [];
+}
+/* Reconstruit la liste des responsables au chargement depuis le backend :
+   le backend ne stocke qu'un ownerId + une chaîne de noms (champ owner).
+   On repart de ownerId puis on complète via les noms (champ owner). */
+function _reconstructOwnerIds(t) {
+  if (Array.isArray(t.ownerIds)) {
+    return t.ownerIds.map(Number).filter(function(x){ return !isNaN(x); });
+  }
+  var ids = [];
+  if (t.ownerId != null && t.ownerId !== '') {
+    var f = parseInt(t.ownerId, 10); if (!isNaN(f)) ids.push(f);
+  }
+  String(t.owner || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean).forEach(function(nm){
+    var m = members.find(function(mm){ return mm.name === nm; });
+    if (m && ids.indexOf(m.id) < 0) ids.push(m.id);
+  });
+  return ids.filter(function(v, i){ return ids.indexOf(v) === i; });
+}
+/* Applique une liste de responsables à une action (maj ownerIds + owner + ownerId pour compat.) */
+function applyTaskOwners(t, ids) {
+  ids = (ids || []).map(function(x){ return parseInt(x, 10); }).filter(function(x){ return !isNaN(x); });
+  ids = ids.filter(function(v, i){ return ids.indexOf(v) === i; });   // unique
+  t.ownerIds = ids;
+  var names = ids.map(function(id){ var m = getMemberById(id); return m ? m.name : ''; }).filter(Boolean);
+  t.owner   = names.join(', ');
+  t.ownerId = ids.length ? ids[0] : null;     // rétro-compatibilité (Gantt, anciens exports)
+}
+function _initials(name) {
+  return (name || '').split(' ').map(function(w){ return w[0] || ''; }).join('').substring(0,2).toUpperCase();
+}
+/* Pastilles des responsables d'une action (pour la ligne) */
+function ownerAvatarsHtml(t) {
+  var ids = getOwnerIds(t);
+  if (!ids.length) return '<span style="color:var(--text-muted)">— Assigner —</span>';
+  return ids.map(function(id){
+    var m = getMemberById(id); if (!m) return '';
+    var tip = m.email ? (m.name + ' · ' + m.email) : m.name;
+    return '<span class="owner-chip" title="' + escAttr(tip) + '">' + _initials(m.name) + '</span>';
+  }).join('') + (ids.length > 1 ? '<span style="font-size:10px;color:var(--text-muted);margin-left:2px">×' + ids.length + '</span>' : '');
+}
+
+var _ownerPickerIdx = null;
+function openOwnerPicker(e, idx) {
+  _ownerPickerIdx = idx;
+  var t = tasks[idx];
+  var sel = getOwnerIds(t).map(String);
+  var pop = document.getElementById('ownerPicker');
+  if (!pop) { pop = document.createElement('div'); pop.id = 'ownerPicker'; document.body.appendChild(pop); }
+  var html = '<div class="owner-pop-head">Responsables de l\'action</div>';
+  if (!members.length) {
+    html += '<div class="owner-pop-empty">Aucun responsable enregistré.</div>';
+  } else {
+    html += members.map(function(m){
+      var checked = sel.indexOf(String(m.id)) >= 0 ? ' checked' : '';
+      return '<label class="owner-pop-item"><input type="checkbox"' + checked +
+        ' onchange="toggleTaskOwner(' + idx + ',' + m.id + ',this.checked)"> ' + esc(m.name) + '</label>';
+    }).join('');
+  }
+  html += '<div class="owner-pop-foot">' +
+    '<button onclick="openMemberModal()">＋ Nouveau</button>' +
+    '<button onclick="closeOwnerPicker()">Fermer</button></div>';
+  pop.innerHTML = html;
+  pop.style.display = 'block';
+  // Positionnement sous le bouton
+  var r = e.currentTarget.getBoundingClientRect();
+  var top = r.bottom + window.scrollY + 4;
+  var left = r.left + window.scrollX;
+  var maxLeft = window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 10;
+  if (left > maxLeft) left = Math.max(window.scrollX + 8, maxLeft);
+  pop.style.top = top + 'px';
+  pop.style.left = left + 'px';
+  // Fermeture au clic extérieur
+  setTimeout(function(){ document.addEventListener('mousedown', _ownerPickerOutside); }, 0);
+}
+function _ownerPickerOutside(e) {
+  var pop = document.getElementById('ownerPicker');
+  if (pop && !pop.contains(e.target)) closeOwnerPicker();
+}
+function closeOwnerPicker() {
+  var pop = document.getElementById('ownerPicker');
+  if (pop) pop.style.display = 'none';
+  document.removeEventListener('mousedown', _ownerPickerOutside);
+  _ownerPickerIdx = null;
+}
+function toggleTaskOwner(idx, memberId, checked) {
+  var t = tasks[idx]; if (!t) return;
+  var ids = getOwnerIds(t).map(Number);
+  memberId = Number(memberId);
+  if (checked) { if (ids.indexOf(memberId) < 0) ids.push(memberId); }
+  else { ids = ids.filter(function(x){ return x !== memberId; }); }
+  applyTaskOwners(t, ids);
+  saveToStorage();
+  // Mettre à jour les pastilles sans fermer le popover
+  var btn = document.getElementById('ownerbtn-' + idx);
+  if (btn) btn.innerHTML = ownerAvatarsHtml(t);
+  if (typeof renderKPIs === 'function') renderKPIs();
+  if (typeof renderPhaseTable === 'function') renderPhaseTable();
+  if (typeof renderAnalytics === 'function') renderAnalytics();
+}
+
+/* ============================================================
+   RÉORDONNANCEMENT MANUEL DES ACTIONS (glisser-déposer)
+   ============================================================ */
+var _taskDragIdx = null;
+function onTaskDragStart(e, idx) {
+  _taskDragIdx = idx;
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(idx)); } catch(_){} }
+  var row = e.target.closest ? e.target.closest('.task-item') : null;
+  if (row) row.classList.add('dragging');
+}
+function onTaskDragEnd(e) {
+  var row = e.target.closest ? e.target.closest('.task-item') : null;
+  if (row) row.classList.remove('dragging');
+  document.querySelectorAll('.task-item.drag-over').forEach(function(el){ el.classList.remove('drag-over'); });
+}
+function onTaskDragOver(e, idx) {
+  if (_taskDragIdx === null) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  var row = e.currentTarget;
+  document.querySelectorAll('.task-item.drag-over').forEach(function(el){ if (el !== row) el.classList.remove('drag-over'); });
+  if (idx !== _taskDragIdx) row.classList.add('drag-over');
+}
+function onTaskDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+function onTaskDrop(e, targetIdx) {
+  e.preventDefault();
+  var from = _taskDragIdx;
+  _taskDragIdx = null;
+  document.querySelectorAll('.task-item.drag-over,.task-item.dragging').forEach(function(el){ el.classList.remove('drag-over','dragging'); });
+  if (from === null || from === targetIdx || from < 0 || from >= tasks.length) return;
+  var item = tasks.splice(from, 1)[0];
+  var insertAt = (from < targetIdx) ? targetIdx - 1 : targetIdx;
+  if (insertAt < 0) insertAt = 0;
+  if (insertAt > tasks.length) insertAt = tasks.length;
+  tasks.splice(insertAt, 0, item);
+  // Les index absolus changent : on réinitialise sélection et lignes dépliées
+  if (typeof selectedTasks !== 'undefined') selectedTasks.clear();
+  if (typeof expandedTasks !== 'undefined') expandedTasks.clear();
+  saveToStorage();
+  renderAll();
+}
+
 function renderTasks() {
   const statusF   = (document.getElementById('filterStatus')   || {}).value || '';
   const phaseF    = (document.getElementById('filterPhase')    || {}).value || '';
@@ -4392,9 +4594,12 @@ function renderTasks() {
         '</div>'
       : '';
 
-    return '<div class="task-item">' +
+    return '<div class="task-item" data-idx="' + idx + '" ondragover="onTaskDragOver(event,' + idx + ')" ondragleave="onTaskDragLeave(event)" ondrop="onTaskDrop(event,' + idx + ')">' +
 
-      // ⓪ Case de sélection (pour suppression groupée)
+      // ⓪ Poignée de déplacement (réordonner par priorité)
+      '<span class="drag-handle" draggable="true" title="Glisser pour réordonner cette action" onclick="event.stopPropagation()" ondragstart="onTaskDragStart(event,' + idx + ')" ondragend="onTaskDragEnd(event)">⠿</span>' +
+
+      // ① Case de sélection (pour suppression groupée)
       '<input type="checkbox" class="row-select" ' + (selectedTasks.has(idx)?'checked':'') +
         ' title="Sélectionner cette action" onclick="event.stopPropagation();onRowSelectToggle(' + idx + ',this.checked)">' +
 
@@ -4408,13 +4613,11 @@ function renderTasks() {
         (notesSub ? '<small style="padding-left:18px">💬 ' + t.notes.substring(0,55) + (t.notes.length>55?'…':'') + '</small>' : '') +
       '</div>' +
 
-      // ③ Responsable
-      '<div style="display:flex;align-items:center;gap:2px">' +
-        avatarHtml +
-        '<select class="inline-select" style="flex:1;min-width:0" onclick="event.stopPropagation()" onchange="updateTaskField(' + idx + ',\'ownerId\',this.value)">' +
-          _memberOpts(t.ownerId) +
-        '</select>' +
-        '<button class="btn-add-member-inline" onclick="event.stopPropagation();openMemberModal()" title="Ajouter un responsable">＋</button>' +
+      // ② Responsables (multiples)
+      '<div style="display:flex;align-items:center;gap:2px;min-width:0">' +
+        '<button id="ownerbtn-' + idx + '" class="owner-pick-btn" onclick="event.stopPropagation();openOwnerPicker(event,' + idx + ')" title="Assigner / modifier les responsables">' +
+          ownerAvatarsHtml(t) +
+        '</button>' +
       '</div>' +
 
       // ③ Phase
@@ -4555,20 +4758,27 @@ function deleteTask(event, idx) {
 /* ============================================================
    MEMBERS
    ============================================================ */
-function buildOwnerSelect(selectedId) {
-  var sel = document.getElementById('fOwner');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Non assigné —</option>';
-  members.forEach(function(m) {
-    var opt = document.createElement('option');
-    opt.value = String(m.id);
-    opt.textContent = m.name;
-    sel.appendChild(opt);
-  });
-  // Sélectionner après ajout de toutes les options (plus fiable)
-  if (selectedId != null && selectedId !== '') {
-    sel.value = String(selectedId);
+/* Construit la liste à cocher des responsables dans la modale d'action.
+   Accepte un tableau d'IDs, ou un seul ID, ou null. */
+function buildOwnerSelect(selected) {
+  var box = document.getElementById('fOwnerList');
+  if (!box) return;
+  var sel = (Array.isArray(selected) ? selected : (selected != null && selected !== '' ? [selected] : []))
+              .map(String);
+  if (!members.length) {
+    box.innerHTML = '<div class="owner-empty">Aucun responsable. Cliquez sur « + » pour en ajouter.</div>';
+    return;
   }
+  box.innerHTML = members.map(function(m){
+    var checked = sel.indexOf(String(m.id)) >= 0 ? ' checked' : '';
+    return '<label><input type="checkbox" class="fOwnerCb" value="' + String(m.id) + '"' + checked + '> ' + esc(m.name) + '</label>';
+  }).join('');
+}
+/* Récupère les IDs cochés dans la modale d'action */
+function getSelectedOwnerIds() {
+  return Array.prototype.slice.call(document.querySelectorAll('#fOwnerList .fOwnerCb:checked'))
+    .map(function(cb){ return parseInt(cb.value, 10); })
+    .filter(function(x){ return !isNaN(x); });
 }
 
 function openMemberModal() {
@@ -4614,11 +4824,11 @@ function deleteMember(id) {
   if (!confirm('Supprimer le responsable "' + m.name + '" ?\nIl sera retiré de toutes les actions.')) return;
   var idStr = String(id);
   members = members.filter(function(mem) { return String(mem.id) !== idStr; });
-  // Désassigner de toutes les tâches et sous-actions
+  // Désassigner de toutes les tâches (multi-responsables) et sous-actions
   tasks.forEach(function(t) {
-    if (t.ownerId != null && String(t.ownerId) === idStr) {
-      t.ownerId = null;
-      t.owner   = '';
+    var ids = getOwnerIds(t).map(String);
+    if (ids.indexOf(idStr) >= 0) {
+      applyTaskOwners(t, ids.filter(function(x){ return x !== idStr; }));
     }
     (t.subtasks || []).forEach(function(st) {
       if (st.ownerId != null && String(st.ownerId) === idStr) {
@@ -4629,7 +4839,7 @@ function deleteMember(id) {
   });
   saveToStorage();
   renderMemberList();
-  buildOwnerSelect(null);
+  if (document.getElementById('fOwnerList')) buildOwnerSelect(getSelectedOwnerIds());
   renderTasks();
 }
 
@@ -4652,9 +4862,17 @@ function saveNewMember() {
   document.getElementById('mEmail').value = '';
   // Rafraîchir la liste dans la modale
   renderMemberList();
-  // Sélectionner le nouveau membre dans le select de la modale tâche
-  buildOwnerSelect(newMember.id);
-  // Rafraîchir les selects inline dans la liste des tâches
+  // Modale d'action ouverte : conserver les cases cochées + cocher le nouveau
+  if (document.getElementById('fOwnerList')) {
+    buildOwnerSelect(getSelectedOwnerIds().concat([newMember.id]));
+  }
+  // Popover de responsables ouvert sur une action : l'assigner directement
+  if (_ownerPickerIdx != null && tasks[_ownerPickerIdx]) {
+    var t = tasks[_ownerPickerIdx];
+    applyTaskOwners(t, getOwnerIds(t).concat([newMember.id]));
+    saveToStorage();
+  }
+  // Rafraîchir la liste des tâches
   renderTasks();
 }
 
@@ -4882,7 +5100,7 @@ function editTask(eventOrIdx, idx) {
   document.getElementById('fEnd').value      = t.end      || '';
   document.getElementById('fPriority').value = t.priority || '';
   document.getElementById('fNotes').value    = t.notes    || '';
-  buildOwnerSelect(t.ownerId || null);
+  buildOwnerSelect(getOwnerIds(t));
   editSubtasks = JSON.parse(JSON.stringify(t.subtasks || []));
   renderModalSubtasks();
   document.getElementById('modalBackdrop').classList.add('open');
@@ -4893,12 +5111,9 @@ function saveTask() {
   const title = document.getElementById('fTitle').value.trim();
   if (!phase) { alert('Veuillez sélectionner une phase.'); return; }
   if (!title) { alert("Le titre de l'action est obligatoire."); return; }
-  const ownerId = document.getElementById('fOwner').value || null;
-  const member  = ownerId ? getMemberById(ownerId) : null;
+  const ownerIds = getSelectedOwnerIds();
   const task = {
     phase, title,
-    ownerId:   ownerId ? parseInt(ownerId) : null,
-    owner:     member ? member.name : '',
     status:    document.getElementById('fStatus').value,
     start:     document.getElementById('fStart').value,
     end:       document.getElementById('fEnd').value,
@@ -4907,6 +5122,7 @@ function saveTask() {
     subtasks:  JSON.parse(JSON.stringify(editSubtasks)),
     created:   editIndex >= 0 ? tasks[editIndex].created : new Date().toISOString()
   };
+  applyTaskOwners(task, ownerIds);   // remplit ownerIds + owner + ownerId
   if (editIndex >= 0) tasks[editIndex] = task;
   else tasks.push(task);
   saveToStorage(); closeModal(); renderAll();
@@ -5599,11 +5815,10 @@ function renderAnalytics() {
   var memberCount = {};
   var memberDone  = {};
   tasks.forEach(function(t) {
-    if (t.ownerId) {
-      var id = t.ownerId;
+    getOwnerIds(t).forEach(function(id) {
       memberCount[id] = (memberCount[id]||0) + 1;
       if (t.status==='done') memberDone[id] = (memberDone[id]||0) + 1;
-    }
+    });
   });
   var maxM = Math.max.apply(null, Object.values(memberCount).concat([1]));
   var memberEl = document.getElementById('memberChart');
