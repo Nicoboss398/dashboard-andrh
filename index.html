@@ -1457,7 +1457,8 @@
   .res-type-tabs {
     display: flex;
     gap: 4px;
-    background: rgba(0,25,92,0.06);
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,25,92,0.10);
     border-radius: 10px;
     padding: 4px;
     flex-shrink: 0;
@@ -1469,19 +1470,22 @@
     border-radius: 7px;
     background: none;
     font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
+    font-weight: 700;
+    color: #2B3B5E;
     cursor: pointer;
     transition: all .2s;
     font-family: inherit;
     white-space: nowrap;
   }
 
+  .res-type-tab:hover { background: rgba(0,68,195,0.10); color: #0F2460; }
+
   .res-type-tab.active {
     background: var(--gradient);
     color: #fff;
     box-shadow: 0 2px 8px rgba(0,68,195,0.25);
   }
+  .res-type-tab.active:hover { color: #fff; }
 
   .resources-grid {
     display: grid;
@@ -1694,10 +1698,11 @@
     align-items: center;
     gap: 10px;
     font-size: 11px;
-    color: var(--text-muted);
+    color: #2B3B5E;
+    font-weight: 600;
     margin-bottom: 14px;
     padding: 8px 14px;
-    background: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.85);
     border-radius: 8px;
     border: 1px solid var(--border);
   }
