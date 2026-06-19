@@ -2954,15 +2954,24 @@
 <div id="axeModalBackdrop" onclick="closeAxeModalOutside(event)">
   <div id="axeModal">
     <div class="modal-title" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;gap:8px">🧭 Phases</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Ajoutez, renommez ou supprimez les phases (lots) de votre projet. Le renommage met à jour partout.</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Ajoutez, renommez, renumérotez ou réorganisez les phases (lots) de votre projet. Les changements de numéro et de nom se répercutent partout (actions et ressources).</div>
 
     <div id="axeList" style="margin-bottom:14px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:#fafcff;min-height:38px"></div>
 
     <div style="border-top:1px solid var(--border);padding-top:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">➕ Nouvelle phase</div>
       <div class="form-group">
-        <label class="form-label">Nom de la phase *</label>
-        <input class="form-control" type="text" id="axeName" placeholder="Ex : Suivi post-événement" onkeydown="if(event.key==='Enter'){event.preventDefault();addAxe();}">
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div style="width:62px;flex-shrink:0">
+            <label class="form-label">N°</label>
+            <input class="form-control" type="number" min="1" step="1" id="axeKey" placeholder="auto" style="text-align:center" onkeydown="if(event.key==='Enter'){event.preventDefault();addAxe();}">
+          </div>
+          <div style="flex:1;min-width:0">
+            <label class="form-label">Nom de la phase *</label>
+            <input class="form-control" type="text" id="axeName" placeholder="Ex : Suivi post-événement" onkeydown="if(event.key==='Enter'){event.preventDefault();addAxe();}">
+          </div>
+        </div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Laissez « N° » vide pour numéroter automatiquement (à la suite). La liste est triée par numéro.</div>
       </div>
     </div>
 
@@ -4685,8 +4694,29 @@ function openAxeModal() {
   if (typeof shareMode !== 'undefined' && shareMode) return;
   renderAxeList();
   document.getElementById('axeName').value = '';
+  var k = document.getElementById('axeKey'); if (k) k.value = '';
   document.getElementById('axeModalBackdrop').classList.add('open');
   setTimeout(function(){ var el=document.getElementById('axeName'); if(el) el.focus(); }, 80);
+}
+
+/* Trie les phases par numéro croissant (les clés non numériques à la fin) */
+function sortAxes() {
+  axes.sort(function(a, b){
+    var na = parseInt(a.key, 10), nb = parseInt(b.key, 10);
+    if (isNaN(na) && isNaN(nb)) return 0;
+    if (isNaN(na)) return 1;
+    if (isNaN(nb)) return -1;
+    return na - nb;
+  });
+}
+
+/* Remappe une clé de phase partout (actions + ressources) lors d'un changement de numéro */
+function _remapPhaseKey(oldKey, newKey) {
+  if (String(oldKey) === String(newKey)) return;
+  tasks.forEach(function(t){ if (String(t.phase) === String(oldKey)) t.phase = String(newKey); });
+  if (typeof resources !== 'undefined' && resources && resources.forEach) {
+    resources.forEach(function(r){ if (String(r.category) === String(oldKey)) r.category = String(newKey); });
+  }
 }
 function closeAxeModal() { document.getElementById('axeModalBackdrop').classList.remove('open'); }
 function closeAxeModalOutside(e){ if (e.target === document.getElementById('axeModalBackdrop')) closeAxeModal(); }
@@ -4700,13 +4730,64 @@ function renderAxeList() {
   }
   el.innerHTML = axes.map(function(a, i){
     var used = tasks.filter(function(t){ return String(t.phase) === String(a.key); }).length;
+    var upDisabled   = (i === 0) ? ' disabled style="opacity:.3;cursor:not-allowed"' : '';
+    var downDisabled = (i === axes.length - 1) ? ' disabled style="opacity:.3;cursor:not-allowed"' : '';
+    var arrowBtn = 'background:#fff;border:1px solid var(--border);border-radius:5px;width:22px;height:20px;line-height:1;cursor:pointer;font-size:10px;padding:0;color:var(--navy)';
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bg)">' +
-      '<div style="width:26px;height:26px;border-radius:6px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">' + escAttr(a.key) + '</div>' +
+      // Flèches de réorganisation
+      '<div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">' +
+        '<button onclick="moveAxe(' + i + ',-1)"' + upDisabled + ' title="Monter (échange le numéro avec la phase précédente)" style="' + arrowBtn + '">▲</button>' +
+        '<button onclick="moveAxe(' + i + ',1)"' + downDisabled + ' title="Descendre (échange le numéro avec la phase suivante)" style="' + arrowBtn + '">▼</button>' +
+      '</div>' +
+      // Numéro éditable
+      '<input type="number" min="1" step="1" value="' + escAttr(a.key) + '" onchange="updateAxeKey(' + i + ',this.value)" title="Modifier le numéro de cette phase" ' +
+        'style="width:42px;flex-shrink:0;text-align:center;font-weight:700;color:var(--navy);border:1px solid var(--border);border-radius:6px;font-size:12px;padding:6px 4px">' +
+      // Nom éditable
       '<input class="form-control" style="flex:1;min-width:0;font-size:12px;padding:6px 8px" value="' + escAttr(a.name) + '" onchange="updateAxeName(' + i + ',this.value)" title="Renommer cette phase">' +
       (used ? '<span style="font-size:10px;color:var(--text-muted);white-space:nowrap">' + used + ' action' + (used>1?'s':'') + '</span>' : '') +
       '<button onclick="deleteAxe(' + i + ')" style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:11px;flex-shrink:0" title="Supprimer cette phase">🗑️</button>' +
     '</div>';
   }).join('');
+}
+
+/* Modifier le numéro d'une phase (avec remappage des actions/ressources) */
+function updateAxeKey(i, val) {
+  if (!axes[i]) return;
+  var n = parseInt((val || '').trim(), 10);
+  if (isNaN(n) || n < 1) { alert('Le numéro de phase doit être un entier ≥ 1.'); renderAxeList(); return; }
+  var newKey = String(n);
+  var oldKey = String(axes[i].key);
+  if (newKey === oldKey) return;
+  if (axes.some(function(a, j){ return j !== i && String(a.key) === newKey; })) {
+    alert('Le numéro ' + newKey + ' est déjà utilisé par une autre phase.');
+    renderAxeList(); return;
+  }
+  _remapPhaseKey(oldKey, newKey);
+  axes[i].key = newKey;
+  sortAxes();
+  saveToStorage();
+  populateAxeSelects();
+  renderAll();
+  renderAxeList();
+}
+
+/* Monter / descendre une phase : échange son numéro avec la phase voisine */
+function moveAxe(i, dir) {
+  var j = i + dir;
+  if (j < 0 || j >= axes.length) return;
+  var a = axes[i], b = axes[j];
+  var ka = String(a.key), kb = String(b.key);
+  // Échange des numéros avec remappage (via une clé temporaire pour éviter les collisions)
+  var TMP = '__tmp_phase__';
+  _remapPhaseKey(ka, TMP);
+  _remapPhaseKey(kb, ka);
+  _remapPhaseKey(TMP, kb);
+  a.key = kb; b.key = ka;
+  sortAxes();
+  saveToStorage();
+  populateAxeSelects();
+  renderAll();
+  renderAxeList();
 }
 
 function updateAxeName(i, val) {
@@ -4724,11 +4805,29 @@ function addAxe() {
   var input = document.getElementById('axeName');
   var name = (input.value || '').trim();
   if (!name) { alert('Donnez un nom à la phase.'); return; }
-  var max = -1;
-  axes.forEach(function(a){ var n = parseInt(a.key, 10); if (!isNaN(n) && n > max) max = n; });
-  var key = String(max + 1);
+
+  var keyInput = document.getElementById('axeKey');
+  var rawKey = keyInput ? (keyInput.value || '').trim() : '';
+  var key;
+  if (rawKey) {
+    var n = parseInt(rawKey, 10);
+    if (isNaN(n) || n < 1) { alert('Le numéro de phase doit être un entier ≥ 1.'); return; }
+    key = String(n);
+    if (axes.some(function(a){ return String(a.key) === key; })) {
+      alert('Le numéro ' + key + ' est déjà utilisé. Choisissez-en un autre (vous pourrez renuméroter ensuite).');
+      return;
+    }
+  } else {
+    // Numérotation automatique : prochain entier disponible, en démarrant à 1
+    var max = 0;
+    axes.forEach(function(a){ var v = parseInt(a.key, 10); if (!isNaN(v) && v > max) max = v; });
+    key = String(max + 1);
+  }
+
   axes.push({ key: key, name: name });
+  sortAxes();
   input.value = '';
+  if (keyInput) keyInput.value = '';
   saveToStorage();
   populateAxeSelects();
   renderAll();
