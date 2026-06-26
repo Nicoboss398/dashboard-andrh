@@ -2450,15 +2450,21 @@
 
       <!-- VUE CHAT -->
       <div id="chatView" style="display:flex;flex-direction:column;flex:1;min-height:380px">
+        <!-- Badge identité (remplace "Vous êtes") -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Vous êtes</span>
-          <select id="chatMe" class="form-control" style="height:32px;padding:2px 8px;font-size:13px" onchange="setChatMe()"></select>
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Connecté·e :</span>
+          <span id="chatMeBadge" style="font-size:12px;font-weight:600;color:var(--navy);background:var(--gradient-soft);border:1px solid var(--border);border-radius:16px;padding:3px 11px">(non identifié)</span>
+          <!-- Select caché conservé pour compatibilité interne -->
+          <select id="chatMe" style="display:none" onchange="setChatMe()"></select>
         </div>
         <div id="chatMessages" style="flex:1;overflow-y:auto;max-height:300px;min-height:200px;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fafcff;display:flex;flex-direction:column;gap:8px"></div>
-        <div style="display:flex;gap:6px;margin-top:10px;align-items:center">
-          <select id="chatTo" class="form-control" style="height:38px;padding:4px 6px;font-size:12px;flex:0 0 128px" title="Destinataire"></select>
-          <input id="chatInput" class="form-control" type="text" placeholder="Votre message…" style="flex:1;height:38px" onkeydown="if(event.key==='Enter')sendChatMessage()">
-          <button class="btn-primary" style="height:38px;white-space:nowrap" onclick="sendChatMessage()">Envoyer</button>
+        <div style="display:flex;gap:6px;margin-top:10px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+            <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px">Destinataire</span>
+            <select id="chatTo" class="form-control" style="height:34px;padding:3px 6px;font-size:12px;width:128px" title="Destinataire"></select>
+          </div>
+          <input id="chatInput" class="form-control" type="text" placeholder="Votre message… (@Prénom pour mentionner)" style="flex:1;height:34px" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="btn-primary" style="height:34px;white-space:nowrap" onclick="sendChatMessage()">Envoyer</button>
         </div>
       </div>
 
@@ -3768,18 +3774,33 @@ function renderChat() {
   if (!box) return;
   if (!chatMe) { try { chatMe = localStorage.getItem('andrh_chat_me') || ''; } catch (e) {} }
 
+  // Mettre à jour le badge d'identité
+  var badge = document.getElementById('chatMeBadge');
+  if (badge) badge.textContent = chatMe || '(non identifié)';
+
+  // Mettre à jour le select caché (compatibilité interne)
   var meSel = document.getElementById('chatMe');
   if (meSel) {
-    var hMe = '<option value="">— Choisir —</option>';
-    (members || []).forEach(function (m) { hMe += '<option value="' + esc_(m.name) + '">' + esc_(m.name) + '</option>'; });
+    var teamNames = (typeof TEAM !== 'undefined' ? TEAM : []).map(function(t){ return t.name; });
+    var memberNames = (members || []).map(function(m){ return m.name; });
+    var allNames = teamNames.concat(memberNames.filter(function(n){ return teamNames.indexOf(n) === -1; }));
+    var hMe = allNames.map(function(n){ return '<option value="' + esc_(n) + '">' + esc_(n) + '</option>'; }).join('');
     meSel.innerHTML = hMe;
     if (chatMe) meSel.value = chatMe;
   }
+
+  // Destinataire : TEAM + members (sauf soi-même)
   var toSel = document.getElementById('chatTo');
   if (toSel) {
     var prevTo = toSel.value;
     var hTo = '<option value="all">Tout le groupe</option>';
-    (members || []).forEach(function (m) { if (m.name !== chatMe) hTo += '<option value="' + esc_(m.name) + '">@ ' + esc_(m.name) + '</option>'; });
+    var seen = {};
+    (typeof TEAM !== 'undefined' ? TEAM : []).forEach(function(t) {
+      if (t.name !== chatMe) { hTo += '<option value="' + esc_(t.name) + '">@ ' + esc_(t.name) + '</option>'; seen[t.name] = 1; }
+    });
+    (members || []).forEach(function(m) {
+      if (m.name !== chatMe && !seen[m.name]) hTo += '<option value="' + esc_(m.name) + '">@ ' + esc_(m.name) + '</option>';
+    });
     toSel.innerHTML = hTo;
     if (prevTo) toSel.value = prevTo;
   }
@@ -3809,7 +3830,7 @@ function renderChat() {
 
 function sendChatMessage() {
   if (!chatMe) { var sel = document.getElementById('chatMe'); chatMe = sel ? sel.value : ''; }
-  if (!chatMe) { alert('Sélectionnez d\'abord votre identité (« Vous êtes »).'); return; }
+  if (!chatMe) { alert('Identité non reconnue. Veuillez vous reconnecter.'); return; }
   var input = document.getElementById('chatInput');
   var text = (input.value || '').trim();
   if (!text) return;
@@ -3826,46 +3847,59 @@ function sendChatMessage() {
 
 /* Détecte les @mentions dans un message et envoie des notifications email */
 function detectAndNotifyMentions(text, author) {
-  if (!text || !members || !members.length) return;
+  if (!text) return;
+
+  // Fusionner TEAM (hardcodé) + members (backend) — TEAM a la priorité
+  var allContacts = [];
+  (typeof TEAM !== 'undefined' ? TEAM : []).forEach(function(t) {
+    if (t.email) allContacts.push({ name: t.name, email: t.email });
+  });
+  (members || []).forEach(function(m) {
+    if (!m.email) return;
+    var already = allContacts.some(function(c){ return c.email.toLowerCase() === m.email.toLowerCase(); });
+    if (!already) allContacts.push({ name: m.name, email: m.email });
+  });
+  if (!allContacts.length) return;
 
   function htmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  var bodyTpl = function(who, msg) {
-    return '<p><b>' + htmlEsc(author) + '</b> vous a mentionné dans la discussion — Commission ANDRH :</p>'
-      + '<blockquote style="border-left:3px solid #0044C3;margin:10px 0;padding:6px 12px;color:#00195C">'
-      + htmlEsc(msg).replace(/\n/g,'<br>') + '</blockquote>'
-      + '<p style="color:#888;font-size:12px">Dashboard ANDRH — Commission Développement RH &amp; IA</p>';
+  var bodyTpl = function(msg) {
+    return '<div style="font-family:\'Segoe UI\',sans-serif;max-width:560px">'
+      + '<p style="margin:0 0 10px"><b>' + htmlEsc(author) + '</b> vous a mentionné dans la discussion :</p>'
+      + '<blockquote style="border-left:4px solid #0044C3;margin:0 0 10px;padding:8px 14px;background:#f0f4fb;border-radius:0 8px 8px 0;color:#00195C;white-space:pre-wrap">'
+      + htmlEsc(msg) + '</blockquote>'
+      + '<p style="color:#888;font-size:12px;margin:0">Dashboard ANDRH — Commission Développement RH &amp; IA</p>'
+      + '</div>';
   };
 
   // @équipe projet → notifier tout le monde (sauf l'expéditeur)
-  if (/@équipe\s*projet/i.test(text)) {
-    var allEmails = (members || []).filter(function(m){ return m.email && m.name !== author; }).map(function(m){ return m.email; });
+  if (/@[ée]quipe\s*projet/i.test(text)) {
+    var allEmails = allContacts.filter(function(c){ return c.name !== author; }).map(function(c){ return c.email; });
     if (allEmails.length) {
       Backend.api('sendEmail', {
         to: allEmails.join(', '),
-        subject: '📢 @équipe projet — vous êtes mentionné dans la discussion ANDRH',
-        body: bodyTpl('équipe projet', text),
-        fromName: 'Dashboard ANDRH', replyTo: ''
+        subject: '📢 @équipe projet — message dans la discussion ANDRH',
+        body: bodyTpl(text),
+        fromName: author || 'Dashboard ANDRH', replyTo: ''
       });
     }
     return;
   }
 
-  // @NomPrénom individuel : cherche chaque membre dont un mot du nom apparaît après @
+  // @Prénom ou @Nom individuel
   var notified = [];
-  (members || []).forEach(function(m) {
-    if (!m.email || m.name === author) return;
-    // Construire un regex qui matche @(NomComplet) ou @(Prénom) ou @(Nom)
-    var parts = m.name.trim().split(/\s+/).filter(function(p){ return p.length > 1; });
+  allContacts.forEach(function(c) {
+    if (c.name === author) return;
+    var parts = c.name.trim().split(/\s+/).filter(function(p){ return p.length > 1; });
     var matched = parts.some(function(p) {
       return new RegExp('@' + p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i').test(text);
-    });
-    if (matched && notified.indexOf(m.email) === -1) {
-      notified.push(m.email);
+    }) || new RegExp('@' + c.name.replace(/\s+/g,'\\s+').replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i').test(text);
+    if (matched && notified.indexOf(c.email) === -1) {
+      notified.push(c.email);
       Backend.api('sendEmail', {
-        to: m.email,
+        to: c.email,
         subject: '💬 Vous êtes mentionné dans la discussion — Commission ANDRH',
-        body: bodyTpl(m.name, text),
-        fromName: 'Dashboard ANDRH', replyTo: ''
+        body: bodyTpl(text),
+        fromName: author || 'Dashboard ANDRH', replyTo: ''
       });
     }
   });
@@ -3995,27 +4029,51 @@ var Backend = (function () {
       + '<div style="width:54px;height:54px;margin:0 auto 14px;border-radius:13px;display:flex;align-items:center;'
       + 'justify-content:center;color:#fff;font-size:24px;background:linear-gradient(145deg,#00C8E8,#0044C3,#00195C);">🔐</div>'
       + '<h2 style="margin:0 0 6px;color:#00195C;font-size:18px;">Espace collaboratif ANDRH</h2>'
-      + '<p style="margin:0 0 16px;color:#5A6B9A;font-size:13px;">Saisissez le code d\'accès partagé de la commission.</p>'
-      + '<input id="acCodeInput" type="password" placeholder="Code d\'accès" autocomplete="off" '
+      + '<p style="margin:0 0 14px;color:#5A6B9A;font-size:13px;">Identifiez-vous pour accéder à l\'espace collaboratif.</p>'
+      + '<input id="acEmailInput" type="email" placeholder="Votre adresse e-mail" autocomplete="email" '
+      + 'style="width:100%;padding:11px 13px;border:1px solid #D0DCF5;border-radius:9px;font-size:14px;color:#00195C;box-sizing:border-box;margin-bottom:10px;">'
+      + '<input id="acCodeInput" type="password" placeholder="Code d\'accès partagé" autocomplete="off" '
       + 'style="width:100%;padding:11px 13px;border:1px solid #D0DCF5;border-radius:9px;font-size:14px;color:#00195C;box-sizing:border-box;">'
       + '<div id="acCodeErr" style="color:#D62B2B;font-size:12px;min-height:16px;margin:8px 0 4px;"></div>'
       + '<button id="acCodeBtn" style="width:100%;padding:11px;border:0;border-radius:9px;color:#fff;font-size:14px;'
       + 'font-weight:700;cursor:pointer;background:linear-gradient(145deg,#0044C3,#00195C);">Accéder</button>'
       + '</div>';
     document.body.appendChild(bd);
+    var emailInput = bd.querySelector('#acEmailInput');
     var input = bd.querySelector('#acCodeInput');
     var err   = bd.querySelector('#acCodeErr');
     var btn   = bd.querySelector('#acCodeBtn');
-    setTimeout(function () { input.focus(); }, 60);
+    setTimeout(function () { emailInput ? emailInput.focus() : input.focus(); }, 60);
 
     function submit() {
-      var code = input.value.trim();
-      if (!code) { err.textContent = 'Veuillez saisir le code.'; return; }
+      var email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+      var code  = input.value.trim();
+      if (emailInput && !email) { err.textContent = 'Veuillez saisir votre adresse e-mail.'; emailInput.focus(); return; }
+      if (!code) { err.textContent = 'Veuillez saisir le code d\'accès.'; input.focus(); return; }
       btn.disabled = true; btn.textContent = 'Vérification…'; err.textContent = '';
       accessCode = code;
       api('bootstrap').then(function (res) {
         if (res && res.ok) {
           try { localStorage.setItem(CODE_KEY, code); } catch (e) {}
+          // Identifier l'utilisateur depuis son email (TEAM en priorité, sinon members)
+          if (email) {
+            var found = null;
+            var teamArr = (typeof TEAM !== 'undefined') ? TEAM : [];
+            for (var i = 0; i < teamArr.length; i++) {
+              if (teamArr[i].email && teamArr[i].email.toLowerCase() === email) { found = teamArr[i]; break; }
+            }
+            if (!found) {
+              var membArr = (typeof members !== 'undefined') ? members : [];
+              for (var j = 0; j < membArr.length; j++) {
+                if (membArr[j].email && membArr[j].email.toLowerCase() === email) { found = membArr[j]; break; }
+              }
+            }
+            if (found) {
+              chatMe = found.name;
+              try { localStorage.setItem('andrh_chat_me',    chatMe); } catch (e) {}
+              try { localStorage.setItem('andrh_login_email', email); } catch (e) {}
+            }
+          }
           document.body.removeChild(bd);
           onOk(res);
         } else {
@@ -4030,6 +4088,7 @@ var Backend = (function () {
       });
     }
     btn.addEventListener('click', submit);
+    emailInput && emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); input.focus(); } });
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
   }
 
@@ -4080,9 +4139,28 @@ var Backend = (function () {
   function start() {
     pill('Connexion…', '#0044C3');
     try { accessCode = localStorage.getItem(CODE_KEY) || ''; } catch (e) {}
+    // Restaurer l'identité sauvegardée
+    try {
+      var savedEmail = localStorage.getItem('andrh_login_email') || '';
+      if (!chatMe) chatMe = localStorage.getItem('andrh_chat_me') || '';
+      // Vérifier la cohérence email → nom dans TEAM
+      if (savedEmail && !chatMe && typeof TEAM !== 'undefined') {
+        for (var i = 0; i < TEAM.length; i++) {
+          if (TEAM[i].email && TEAM[i].email.toLowerCase() === savedEmail.toLowerCase()) {
+            chatMe = TEAM[i].name;
+            localStorage.setItem('andrh_chat_me', chatMe);
+            break;
+          }
+        }
+      }
+    } catch (e) {}
+
     if (accessCode) {
       api('bootstrap').then(function (res) {
-        if (res && res.ok) { proceed(res); }
+        if (res && res.ok) {
+          if (!chatMe) { askCode(proceed); } // email non identifié → montrer login complet
+          else { proceed(res); }
+        }
         else { accessCode = ''; askCode(proceed); }
       }).catch(function () { askCode(proceed); });
     } else {
