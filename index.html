@@ -2267,7 +2267,7 @@
     <button class="nav-item" data-view="resources" onclick="showView('resources',this);if(window.innerWidth<=768)toggleSidebar()">
       <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M8 2v3h3"/><path d="M4 7h6M4 9.5h4"/></svg></span> Ressources
     </button>
-    <button class="nav-item" onclick="focusEmailTab()">
+    <button class="nav-item" onclick="openEmailModal()">
       <span class="icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2.5" width="12" height="9" rx="1.5"/><path d="M1.5 3.5L7 7.5l5.5-4"/></svg></span> Email privé</button>
   </nav>
 
@@ -2443,9 +2443,9 @@
 
     <!-- ===== ESPACE DE DISCUSSION ===== -->
     <div class="section-card chat-card" id="chatCard" style="flex:1 1 360px;min-width:300px;display:flex;flex-direction:column;margin-bottom:0">
-      <div style="display:flex;gap:6px;margin-bottom:12px">
-        <button id="chatTabBtn" class="chat-tab chat-tab-active" onclick="switchChatTab('chat')">💬 Discussion</button>
-        <button id="emailTabBtn" class="chat-tab" onclick="switchChatTab('email')">✉️ Email privé</button>
+      <div style="display:flex;gap:6px;margin-bottom:12px;align-items:center">
+        <span style="font-size:13px;font-weight:700;color:var(--navy)">💬 Discussion</span>
+        <button class="chat-tab" onclick="openEmailModal()" style="margin-left:auto">✉️ Email privé</button>
       </div>
 
       <!-- VUE CHAT -->
@@ -2462,35 +2462,6 @@
         </div>
       </div>
 
-      <!-- VUE EMAIL PRIVÉ -->
-      <div id="emailView" style="display:none;flex-direction:column;flex:1">
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">Expéditeur — au nom de</label>
-          <select class="form-control" id="emailFrom"></select>
-        </div>
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">Destinataires * (séparés par des virgules)</label>
-          <input class="form-control" type="text" id="emailTo" placeholder="prenom.nom@organisation.fr, …">
-          <div id="emailMemberChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
-        </div>
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">Copie (CC)</label>
-          <input class="form-control" type="text" id="emailCc" placeholder="(optionnel)">
-        </div>
-        <div class="form-group" style="margin-bottom:10px">
-          <label class="form-label">Objet *</label>
-          <input class="form-control" type="text" id="emailSubject" placeholder="Ex : Point d'avancement — Commission">
-        </div>
-        <div class="form-group" style="margin-bottom:8px">
-          <label class="form-label">Message *</label>
-          <textarea class="form-control" id="emailBody" rows="4" placeholder="Bonjour,&#10;…"></textarea>
-        </div>
-        <div id="emailStatus" style="font-size:12px;min-height:16px;margin-bottom:6px"></div>
-        <div style="display:flex;justify-content:flex-end">
-          <button class="btn-primary" id="emailSendBtn" onclick="sendEmailFromUI()">✉️ Envoyer</button>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Envoi technique via le compte de la commission ; affiché « au nom de » l'expéditeur choisi, réponses adressées à son email.</div>
-      </div>
     </div>
 
     <!-- Avancement par axe (droite) -->
@@ -2992,7 +2963,7 @@
 
     <!-- Ajout nouveau -->
     <div style="border-top:1px solid var(--border);padding-top:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">➕ Nouveau responsable</div>
+      <div id="memberFormTitle" style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">➕ Nouveau responsable</div>
       <div class="form-group">
         <label class="form-label">Prénom &amp; Nom *</label>
         <input class="form-control" type="text" id="mName" placeholder="Ex : Marie Dupont">
@@ -3005,8 +2976,45 @@
 
     <div class="modal-actions" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn-secondary" onclick="closeMemberModal()">Fermer</button>
-      <button class="btn-primary" onclick="saveNewMember()">✅ Ajouter</button>
+      <button class="btn-primary" id="memberSaveBtn" onclick="saveMemberForm()">✅ Ajouter</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: Email privé ===== -->
+<div id="emailModalBackdrop" onclick="closeEmailModalOutside(event)" style="display:none;position:fixed;inset:0;background:rgba(0,25,92,.45);z-index:1050;align-items:center;justify-content:center;padding:16px">
+  <div id="emailModal" style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,25,92,.22);max-height:90vh;overflow-y:auto;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px">✉️ Email privé</div>
+      <button onclick="closeEmailModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);line-height:1" title="Fermer">✕</button>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Expéditeur — au nom de</label>
+      <select class="form-control" id="emailFrom"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Destinataires * <span style="font-weight:400;color:var(--text-muted)">(séparés par des virgules)</span></label>
+      <input class="form-control" type="text" id="emailTo" placeholder="prenom.nom@organisation.fr, …">
+      <div id="emailMemberChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Copie (CC)</label>
+      <input class="form-control" type="text" id="emailCc" placeholder="(optionnel)">
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Objet *</label>
+      <input class="form-control" type="text" id="emailSubject" placeholder="Ex : Point d'avancement — Commission">
+    </div>
+    <div class="form-group" style="margin-bottom:8px">
+      <label class="form-label">Message *</label>
+      <textarea class="form-control" id="emailBody" rows="5" placeholder="Bonjour,&#10;…"></textarea>
+    </div>
+    <div id="emailStatus" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn-secondary" onclick="closeEmailModal()">Annuler</button>
+      <button class="btn-primary" id="emailSendBtn" onclick="sendEmailFromUI()">✉️ Envoyer</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Envoi technique via le compte de la commission ; affiché « au nom de » l'expéditeur choisi, réponses adressées à son email.</div>
   </div>
 </div>
 
@@ -3723,19 +3731,30 @@ var _chatLastCount = -1;
 function esc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 function switchChatTab(tab) {
-  var isChat = tab !== 'email';
-  document.getElementById('chatView').style.display  = isChat ? 'flex' : 'none';
-  document.getElementById('emailView').style.display = isChat ? 'none' : 'flex';
-  document.getElementById('chatTabBtn').classList.toggle('chat-tab-active', isChat);
-  document.getElementById('emailTabBtn').classList.toggle('chat-tab-active', !isChat);
-  if (!isChat) populateEmailUI();
+  // Kept for compatibility — email is now a popup
+  if (tab === 'email') { openEmailModal(); return; }
+  var chatView = document.getElementById('chatView');
+  if (chatView) chatView.style.display = 'flex';
 }
 
-function focusEmailTab() {
-  if (window.innerWidth <= 768) toggleSidebar();
-  switchChatTab('email');
-  var c = document.getElementById('chatCard');
-  if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+function focusEmailTab() { openEmailModal(); }
+
+function openEmailModal() {
+  if (window.innerWidth <= 768) toggleSidebar && toggleSidebar();
+  populateEmailUI();
+  var bd = document.getElementById('emailModalBackdrop');
+  if (bd) { bd.style.display = 'flex'; setTimeout(function(){ document.getElementById('emailSubject') && document.getElementById('emailSubject').focus(); }, 80); }
+}
+
+function closeEmailModal() {
+  var bd = document.getElementById('emailModalBackdrop');
+  if (bd) bd.style.display = 'none';
+  var st = document.getElementById('emailStatus');
+  if (st) st.textContent = '';
+}
+
+function closeEmailModalOutside(e) {
+  if (e.target === document.getElementById('emailModalBackdrop')) closeEmailModal();
 }
 
 function setChatMe() {
@@ -3799,9 +3818,57 @@ function sendChatMessage() {
   var optimistic = { id: Date.now(), ts: new Date().toISOString(), author: chatMe, to: to, text: text };
   messages.push(optimistic);
   renderChat();
+  detectAndNotifyMentions(text, chatMe);
   Backend.api('postMessage', { author: chatMe, to: to, text: text }).then(function (res) {
     if (!res || !res.ok) { optimistic.text = '⚠️ (non envoyé) ' + optimistic.text; renderChat(); }
   }).catch(function () { optimistic.text = '⚠️ (hors ligne) ' + optimistic.text; renderChat(); });
+}
+
+/* Détecte les @mentions dans un message et envoie des notifications email */
+function detectAndNotifyMentions(text, author) {
+  if (!text || !members || !members.length) return;
+
+  function htmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var bodyTpl = function(who, msg) {
+    return '<p><b>' + htmlEsc(author) + '</b> vous a mentionné dans la discussion — Commission ANDRH :</p>'
+      + '<blockquote style="border-left:3px solid #0044C3;margin:10px 0;padding:6px 12px;color:#00195C">'
+      + htmlEsc(msg).replace(/\n/g,'<br>') + '</blockquote>'
+      + '<p style="color:#888;font-size:12px">Dashboard ANDRH — Commission Développement RH &amp; IA</p>';
+  };
+
+  // @équipe projet → notifier tout le monde (sauf l'expéditeur)
+  if (/@équipe\s*projet/i.test(text)) {
+    var allEmails = (members || []).filter(function(m){ return m.email && m.name !== author; }).map(function(m){ return m.email; });
+    if (allEmails.length) {
+      Backend.api('sendEmail', {
+        to: allEmails.join(', '),
+        subject: '📢 @équipe projet — vous êtes mentionné dans la discussion ANDRH',
+        body: bodyTpl('équipe projet', text),
+        fromName: 'Dashboard ANDRH', replyTo: ''
+      });
+    }
+    return;
+  }
+
+  // @NomPrénom individuel : cherche chaque membre dont un mot du nom apparaît après @
+  var notified = [];
+  (members || []).forEach(function(m) {
+    if (!m.email || m.name === author) return;
+    // Construire un regex qui matche @(NomComplet) ou @(Prénom) ou @(Nom)
+    var parts = m.name.trim().split(/\s+/).filter(function(p){ return p.length > 1; });
+    var matched = parts.some(function(p) {
+      return new RegExp('@' + p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i').test(text);
+    });
+    if (matched && notified.indexOf(m.email) === -1) {
+      notified.push(m.email);
+      Backend.api('sendEmail', {
+        to: m.email,
+        subject: '💬 Vous êtes mentionné dans la discussion — Commission ANDRH',
+        body: bodyTpl(m.name, text),
+        fromName: 'Dashboard ANDRH', replyTo: ''
+      });
+    }
+  });
 }
 
 /* ---- Email privé ---- */
@@ -3860,7 +3927,10 @@ function sendEmailFromUI() {
     if (res && res.ok) {
       st.style.color = 'var(--success)'; st.textContent = '✅ Email envoyé à ' + to;
       document.getElementById('emailSubject').value = '';
-      document.getElementById('emailBody').value = '';
+      document.getElementById('emailBody').value    = '';
+      document.getElementById('emailTo').value      = '';
+      document.getElementById('emailCc').value      = '';
+      setTimeout(closeEmailModal, 1800);
     } else {
       st.style.color = 'var(--danger)'; st.textContent = 'Échec : ' + ((res && (res.message || res.error)) || 'erreur inconnue');
     }
@@ -4802,6 +4872,7 @@ function openMemberModal() {
 }
 
 function closeMemberModal() {
+  _resetMemberForm && _resetMemberForm();
   document.getElementById('memberModalBackdrop').classList.remove('open');
 }
 
@@ -4822,6 +4893,9 @@ function renderMemberList() {
         '<div style="font-size:12px;font-weight:600;color:var(--navy)">' + m.name + '</div>' +
         emailLine +
       '</div>' +
+      '<button onclick="editMember(' + m.id + ')" ' +
+        'style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:11px;flex-shrink:0;margin-right:4px" ' +
+        'title="Modifier ce responsable">✏️</button>' +
       '<button onclick="deleteMember(' + m.id + ')" ' +
         'style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:11px;flex-shrink:0" ' +
         'title="Supprimer ce responsable">🗑️</button>' +
@@ -4859,34 +4933,65 @@ function closeMemberModalOutside(e) {
   if (e.target === document.getElementById('memberModalBackdrop')) closeMemberModal();
 }
 
-function saveNewMember() {
+var _editingMemberId = null;
+
+function editMember(id) {
+  var m = getMemberById(id);
+  if (!m) return;
+  _editingMemberId = id;
+  document.getElementById('mName').value  = m.name;
+  document.getElementById('mEmail').value = m.email || '';
+  document.getElementById('mName').focus();
+  document.getElementById('memberFormTitle').textContent = '✏️ Modifier le responsable';
+  document.getElementById('memberSaveBtn').textContent   = '💾 Enregistrer';
+}
+
+function _resetMemberForm() {
+  _editingMemberId = null;
+  document.getElementById('mName').value  = '';
+  document.getElementById('mEmail').value = '';
+  document.getElementById('memberFormTitle').textContent = '➕ Nouveau responsable';
+  document.getElementById('memberSaveBtn').textContent   = '✅ Ajouter';
+}
+
+function saveMemberForm() {
   var name  = document.getElementById('mName').value.trim();
   var email = document.getElementById('mEmail').value.trim();
   if (!name)  { alert('Le nom est obligatoire.'); return; }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     alert('Adresse e-mail invalide.'); return;
   }
+
+  if (_editingMemberId != null) {
+    // Mode édition
+    var m = getMemberById(_editingMemberId);
+    if (m) { m.name = name; m.email = email; }
+    saveToStorage();
+    _resetMemberForm();
+    renderMemberList();
+    if (document.getElementById('fOwnerList')) buildOwnerSelect(getSelectedOwnerIds());
+    renderTasks();
+    return;
+  }
+
+  // Mode ajout
   var newMember = { id: Date.now(), name: name, email: email };
   members.push(newMember);
   saveToStorage();
-  // Réinitialiser les champs
-  document.getElementById('mName').value  = '';
-  document.getElementById('mEmail').value = '';
-  // Rafraîchir la liste dans la modale
+  _resetMemberForm();
   renderMemberList();
-  // Modale d'action ouverte : conserver les cases cochées + cocher le nouveau
   if (document.getElementById('fOwnerList')) {
     buildOwnerSelect(getSelectedOwnerIds().concat([newMember.id]));
   }
-  // Popover de responsables ouvert sur une action : l'assigner directement
   if (_ownerPickerIdx != null && tasks[_ownerPickerIdx]) {
     var t = tasks[_ownerPickerIdx];
     applyTaskOwners(t, getOwnerIds(t).concat([newMember.id]));
     saveToStorage();
   }
-  // Rafraîchir la liste des tâches
   renderTasks();
 }
+
+function saveNewMember() { saveMemberForm(); }
 
 function getMemberById(id) {
   if (id == null || id === '') return null;
