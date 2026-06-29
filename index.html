@@ -443,6 +443,20 @@
   .kpi-card.blue .kpi-value { color: var(--blue); }
   .kpi-card.teal .kpi-value { color: var(--teal); }
 
+  /* Clickable KPI & alert cards */
+  .kpi-card.clickable, .alert-card.clickable {
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .kpi-card.clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(0,25,92,0.26);
+  }
+  .alert-card.clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(0,25,92,0.22);
+  }
+
   /* Progress bar */
   .progress-bar-outer {
     height: 6px;
@@ -1047,7 +1061,7 @@
   /* ===== ANALYTICS ===== */
   .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 20px;
     padding: 20px;
   }
@@ -2382,27 +2396,27 @@
 
     <!-- KPI cards -->
     <div class="kpi-grid">
-      <div class="kpi-card">
+      <div class="kpi-card clickable" onclick="filterAndGotoActions('','','')" title="Voir toutes les actions">
         <div class="kpi-label">Éléments totaux</div>
         <div class="kpi-value" id="kpiTotal">0</div>
         <div class="kpi-sub" id="kpiTotalSub">Toutes phases confondues</div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card clickable" onclick="filterAndGotoActions('todo','','')" title="Voir les actions à faire">
         <div class="kpi-label">À faire</div>
         <div class="kpi-value" id="kpiTodo">0</div>
         <div class="kpi-sub">En attente</div>
       </div>
-      <div class="kpi-card success">
+      <div class="kpi-card success clickable" onclick="filterAndGotoActions('done','','')" title="Voir les actions terminées">
         <div class="kpi-label">Terminées</div>
         <div class="kpi-value" id="kpiDone">0</div>
         <div class="kpi-sub">Validées</div>
       </div>
-      <div class="kpi-card blue">
+      <div class="kpi-card blue clickable" onclick="filterAndGotoActions('inprogress','','')" title="Voir les actions en cours">
         <div class="kpi-label">En cours</div>
         <div class="kpi-value" id="kpiInProgress">0</div>
         <div class="kpi-sub">En réalisation</div>
       </div>
-      <div class="kpi-card danger">
+      <div class="kpi-card danger clickable" onclick="filterAndGotoActions('blocked','','')" title="Voir les actions bloquées">
         <div class="kpi-label">Bloquées</div>
         <div class="kpi-value" id="kpiBlocked">0</div>
         <div class="kpi-sub">Nécessitent attention</div>
@@ -2418,7 +2432,7 @@
 
     <!-- Alert cards -->
     <div class="alert-grid">
-      <div class="alert-card">
+      <div class="alert-card clickable" onclick="filterAndGotoActions('blocked','','')" title="Voir les actions bloquées">
         <div class="alert-icon red">🔴</div>
         <div>
           <div class="alert-count red" id="alertBlocked">0</div>
@@ -2426,7 +2440,7 @@
           <div class="alert-desc">Nécessitent une action immédiate</div>
         </div>
       </div>
-      <div class="alert-card">
+      <div class="alert-card clickable" onclick="filterAndGotoActions('','high','')" title="Voir les actions haute priorité">
         <div class="alert-icon orange">⏰</div>
         <div>
           <div class="alert-count orange" id="alertHigh">0</div>
@@ -2434,7 +2448,7 @@
           <div class="alert-desc">À traiter en urgence</div>
         </div>
       </div>
-      <div class="alert-card">
+      <div class="alert-card clickable" onclick="filterAndGotoActions('','','deadline7')" title="Voir les actions à échéance cette semaine">
         <div class="alert-icon blue">📅</div>
         <div>
           <div class="alert-count blue" id="alertDeadline">0</div>
@@ -4578,6 +4592,52 @@ function renderAll() {
 }
 
 /* ============================================================
+   NAVIGATION KPI → ACTIONS (widgets cliquables)
+   ============================================================ */
+function filterAndGotoActions(status, priority, special) {
+  // Switch to Actions tab
+  var btns = document.querySelectorAll('.topnav-btn');
+  var taskBtn = null;
+  btns.forEach(function(b){ if (b.textContent.indexOf('Actions') >= 0) taskBtn = b; });
+  showView('tasks', taskBtn);
+  // Apply filters
+  var statusEl   = document.getElementById('filterStatus');
+  var priorityEl = document.getElementById('filterPriority');
+  var phaseEl    = document.getElementById('filterPhase');
+  if (statusEl)   statusEl.value   = status   || '';
+  if (priorityEl) priorityEl.value = priority || '';
+  if (phaseEl)    phaseEl.value    = '';
+  // deadline7 : pas de filtre natif — on vide les filtres pour montrer toutes les actions
+  // et on laisse l'utilisateur repérer les échéances dans la colonne date
+  renderTasks();
+  // Scroll to task list
+  setTimeout(function(){ var el=document.getElementById('taskList'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 150);
+}
+
+/* ============================================================
+   RÉSOLUTION CANONIQUE DES CLÉS DE PHASE
+   Certaines tâches stockent la phase comme "1. Cadrage & gouvernance"
+   (le label complet) au lieu de la clé "1". Cette fonction normalise.
+   ============================================================ */
+function _resolvePhaseKey(ph) {
+  var s = String(ph || '');
+  if (!s) return s;
+  if (PHASES[s] !== undefined) return s;           // clé directe connue
+  // Tenter de parser "N. Nom" → extraire N et vérifier
+  var m = s.match(/^(\d+)\.\s*(.*)/);
+  if (m) {
+    var numKey = m[1];
+    if (PHASES[numKey] !== undefined) return numKey; // clé numérique connue
+    // Chercher par nom
+    for (var i = 0; i < axes.length; i++) {
+      if (axes[i].name === m[2].trim()) return String(axes[i].key);
+    }
+    return numKey; // fallback : numéro seul
+  }
+  return s; // inconnu, retourner tel quel
+}
+
+/* ============================================================
    KPIs — inclut les sous-actions dans les compteurs
    ============================================================ */
 function renderKPIs() {
@@ -4638,23 +4698,24 @@ function renderPhaseTable() {
   }
   const phases = {};
   tasks.forEach(t => {
-    if (!phases[t.phase]) phases[t.phase] = { total:0, done:0 };
-    phases[t.phase].total++;
-    if (t.status === 'done') phases[t.phase].done++;
+    const key = _resolvePhaseKey(t.phase);
+    if (!phases[key]) phases[key] = { total:0, done:0 };
+    phases[key].total++;
+    if (t.status === 'done') phases[key].done++;
   });
   const colors = ['#0044C3','#00B4D8','#1BA05E','#E8910A','#D62B2B','#6A3FC8'];
   let html = '';
-  Object.keys(phases).sort().forEach((ph, i) => {
+  Object.keys(phases).sort(function(a,b){ var na=parseInt(a,10),nb=parseInt(b,10); return (isNaN(na)||isNaN(nb)) ? a.localeCompare(b) : na-nb; }).forEach((ph, i) => {
     const d = phases[ph];
     const pct = Math.round(d.done / d.total * 100);
     const color = colors[i % colors.length];
-    const rawLabel = PHASES[ph] || ('Phase ' + ph);
-    // Supprimer le préfixe numérique si le label l'inclut déjà (évite "1. 1. Cadrage…")
-    const label = rawLabel.replace(new RegExp('^' + String(ph).replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\.\\s*'), '');
+    // ph est maintenant une clé canonique (ex: "1"). PHASES[ph] = nom court (ex: "Cadrage & gouvernance")
+    const phaseName = PHASES[ph] || ph;
+    const displayLabel = /^\d+$/.test(ph) ? (ph + '. ' + phaseName) : phaseName;
     let pillClass = 'pill-gray', pillTxt = 'Non démarré';
     if (pct === 100) { pillClass = 'pill-green'; pillTxt = 'Terminé'; }
     else if (pct > 0) { pillClass = 'pill-blue';  pillTxt = 'En cours'; }
-    html += '<tr><td><span class="phase-badge"><span class="phase-dot" style="background:' + color + '"></span>' + ph + '. ' + label + '</span></td><td>' + d.total + '</td><td>' + d.done + '</td><td class="progress-cell"><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-outer" style="flex:1"><div class="progress-bar-inner" style="width:' + pct + '%;background:' + color + '"></div></div><span style="font-size:11px;font-weight:700;color:' + color + ';min-width:30px">' + pct + '%</span></div></td><td><span class="status-pill ' + pillClass + '">' + pillTxt + '</span></td></tr>';
+    html += '<tr><td><span class="phase-badge"><span class="phase-dot" style="background:' + color + '"></span>' + displayLabel + '</span></td><td>' + d.total + '</td><td>' + d.done + '</td><td class="progress-cell"><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar-outer" style="flex:1"><div class="progress-bar-inner" style="width:' + pct + '%;background:' + color + '"></div></div><span style="font-size:11px;font-weight:700;color:' + color + ';min-width:30px">' + pct + '%</span></div></td><td><span class="status-pill ' + pillClass + '">' + pillTxt + '</span></td></tr>';
   });
   body.innerHTML = html;
 
@@ -6129,7 +6190,7 @@ function renderAnalytics() {
   // ── Avancement par axe ────────────────────────────────────
   var phases = {};
   tasks.forEach(function(t) {
-    var ph = t.phase || '?';
+    var ph = _resolvePhaseKey(t.phase) || '?';
     if (!phases[ph]) phases[ph] = { total:0, done:0, sub:0, subDone:0 };
     phases[ph].total++;
     if (t.status==='done') phases[ph].done++;
@@ -6140,13 +6201,15 @@ function renderAnalytics() {
   });
   var phaseEl = document.getElementById('phaseChart');
   if (Object.keys(phases).length) {
-    phaseEl.innerHTML = Object.keys(phases).sort().map(function(ph) {
+    var sortedPhs = Object.keys(phases).sort(function(a,b){ var na=parseInt(a,10),nb=parseInt(b,10); return (isNaN(na)||isNaN(nb)) ? a.localeCompare(b) : na-nb; });
+    phaseEl.innerHTML = sortedPhs.map(function(ph) {
       var d = phases[ph];
       var allPh = d.total + d.sub, donePh = d.done + d.subDone;
       var p = allPh ? Math.round(donePh / allPh * 100) : 0;
-      var lbl = (PHASES[ph]||ph).substring(0,24);
+      var phaseName = PHASES[ph] || ph;
+      var lbl = (/^\d+$/.test(ph) ? ph + '. ' + phaseName : phaseName).substring(0, 28);
       return '<div class="bar-row">' +
-        '<div class="bar-labels"><span>' + ph + '. ' + lbl + '</span><span style="font-weight:700;color:var(--blue)">' + p + '%</span></div>' +
+        '<div class="bar-labels"><span>' + lbl + '</span><span style="font-weight:700;color:var(--blue)">' + p + '%</span></div>' +
         '<div class="bar-outer"><div class="bar-inner" style="width:' + p + '%"></div></div>' +
         '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">' + donePh + '/' + allPh + ' éléments terminés</div>' +
       '</div>';
