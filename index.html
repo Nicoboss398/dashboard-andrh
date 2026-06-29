@@ -4641,20 +4641,13 @@ function _resolvePhaseKey(ph) {
    KPIs — inclut les sous-actions dans les compteurs
    ============================================================ */
 function renderKPIs() {
-  // Aplatir : actions + sous-actions
-  var allItems = [];
-  tasks.forEach(function(t) {
-    allItems.push(t);
-    (t.subtasks || []).forEach(function(st) { allItems.push(st); });
-  });
-
-  var mainTotal = tasks.length;
-  var subTotal  = allItems.length - mainTotal;
-  var total = allItems.length;
-  var todo  = allItems.filter(function(i){ return i.status === 'todo'; }).length;
-  var done  = allItems.filter(function(i){ return i.status === 'done'; }).length;
-  var ip    = allItems.filter(function(i){ return i.status === 'inprogress'; }).length;
-  var blk   = allItems.filter(function(i){ return i.status === 'blocked'; }).length;
+  // Comptage sur actions principales uniquement (cohérent avec l'onglet Actions)
+  var total    = tasks.length;
+  var subTotal = tasks.reduce(function(acc, t){ return acc + (t.subtasks || []).length; }, 0);
+  var todo  = tasks.filter(function(t){ return t.status === 'todo'; }).length;
+  var done  = tasks.filter(function(t){ return t.status === 'done'; }).length;
+  var ip    = tasks.filter(function(t){ return t.status === 'inprogress'; }).length;
+  var blk   = tasks.filter(function(t){ return t.status === 'blocked'; }).length;
   var pct   = total ? Math.round(done / total * 100) : 0;
 
   // Alertes sur actions principales uniquement (ont une priorité et des dates)
@@ -4670,7 +4663,7 @@ function renderKPIs() {
   document.getElementById('kpiTotal').textContent = total;
   if (document.getElementById('kpiTotalSub')) {
     document.getElementById('kpiTotalSub').textContent =
-      mainTotal + ' action' + (mainTotal > 1 ? 's' : '') +
+      total + ' action' + (total > 1 ? 's' : '') +
       (subTotal > 0 ? ' · ' + subTotal + ' sous-action' + (subTotal > 1 ? 's' : '') : '');
   }
   document.getElementById('kpiTodo').textContent        = todo;
@@ -4916,7 +4909,7 @@ function renderTasks() {
 
   const filtered = tasks.filter(function(t) {
     if (statusF   && t.status   !== statusF)   return false;
-    if (phaseF    && t.phase    !== phaseF)    return false;
+    if (phaseF    && _resolvePhaseKey(t.phase) !== phaseF) return false;
     if (priorityF && t.priority !== priorityF) return false;
     if (searchF) {
       var hay = [
