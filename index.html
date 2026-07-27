@@ -4279,13 +4279,20 @@ var Backend = (function () {
   var syncTimer  = null;
   var syncing    = false;
 
-  /* ---- Appel API ---- */
+  /* ---- Appel API (avec délai maximal pour ne jamais rester bloqué) ---- */
   function api(action, payload) {
-    return fetch(WEBAPP_URL, {
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 25000) : null;
+    var opts = {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: action, accessCode: accessCode, payload: payload || {} })
-    }).then(function (r) { return r.json(); });
+    };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(WEBAPP_URL, opts)
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (timer) clearTimeout(timer); return j; },
+            function (e) { if (timer) clearTimeout(timer); throw e; });
   }
 
   /* ---- Indicateur de synchro ---- */
@@ -4403,7 +4410,7 @@ var Backend = (function () {
         id: t.id, phase: String(t.phase || ''), title: t.title,
         ownerId: t.ownerId === '' ? null : t.ownerId, owner: t.owner || '',
         ownerIds: _reconstructOwnerIds(t),
-        status: t.status || 'todo', start: t.start || '', end: t.end || '',
+        status: t.status || 'todo', start: toISODate(t.start), end: toISODate(t.end),
         priority: t.priority || '', notes: t.notes || '', created: t.created || '',
         subtasks: subs
       };
@@ -4594,6 +4601,8 @@ function loadFromStorage() {
       const data = JSON.parse(raw);
       projects = data.projects || [];
       members  = data.members  || [];
+      // Normalise les dates du cache local ('yyyy-mm-dd' attendu par <input type=date>)
+      projects.forEach(function(p){ (p.tasks || []).forEach(function(t){ t.start = toISODate(t.start); t.end = toISODate(t.end); }); });
       if (data.axes && data.axes.length) {
         axes = data.axes.map(function(a){ return { key:String(a.key), name:a.name }; });
       }
@@ -5019,10 +5028,31 @@ var ECH_OPTS    = [
   ['__none','— Sans échéance']
 ];
 
+/* Normalise n'importe quelle valeur de date en 'yyyy-mm-dd' (format attendu par <input type=date>).
+   Corrige les dates renvoyées par le backend sous forme d'horodatage ISO
+   (ex : "2025-01-14T23:00:00.000Z"), qu'un <input type=date> refuse d'afficher. */
+function _pad2(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+function toISODate(v) {
+  if (v == null || v === '') return '';
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) return '';
+    return v.getFullYear() + '-' + _pad2(v.getMonth() + 1) + '-' + _pad2(v.getDate());
+  }
+  var s = String(v).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                 // déjà propre (date seule)
+  var f = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);          // jj/mm/aaaa
+  if (f) return f[3] + '-' + _pad2(f[2]) + '-' + _pad2(f[1]);
+  var d = new Date(s);                                         // horodatage ISO, etc. → heure locale
+  if (!isNaN(d.getTime())) return d.getFullYear() + '-' + _pad2(d.getMonth() + 1) + '-' + _pad2(d.getDate());
+  return '';
+}
+
 /* Range l'échéance d'une action dans une plage exclusive */
 function echBucket(end) {
-  if (!end) return '__none';
-  var d = new Date(String(end) + 'T00:00:00');
+  var iso = toISODate(end);
+  if (!iso) return '__none';
+  var d = new Date(iso + 'T00:00:00');
   if (isNaN(d.getTime())) return '__none';
   var t = new Date(); t.setHours(0,0,0,0);
   var diff = Math.round((d - t) / 86400000);
@@ -5259,7 +5289,7 @@ function renderTasks() {
       '</select>' +
 
       // ⑤ Échéance
-      '<input type="date" class="inline-date" value="' + (t.end||'') + '" onclick="event.stopPropagation()" onchange="updateTaskField(' + idx + ',\'end\',this.value)">' +
+      '<input type="date" class="inline-date" value="' + toISODate(t.end) + '" onclick="event.stopPropagation()" onchange="updateTaskField(' + idx + ',\'end\',this.value)">' +
 
       // ⑥ Priorité
       '<select class="inline-select" onclick="event.stopPropagation()" onchange="updateTaskField(' + idx + ',\'priority\',this.value)">' +
@@ -5760,8 +5790,8 @@ function editTask(eventOrIdx, idx) {
   document.getElementById('fPhase').value    = t.phase    || '';
   document.getElementById('fTitle').value    = t.title    || '';
   document.getElementById('fStatus').value   = t.status   || 'todo';
-  document.getElementById('fStart').value    = t.start    || '';
-  document.getElementById('fEnd').value      = t.end      || '';
+  document.getElementById('fStart').value    = toISODate(t.start);
+  document.getElementById('fEnd').value      = toISODate(t.end);
   document.getElementById('fPriority').value = t.priority || '';
   document.getElementById('fNotes').value    = t.notes    || '';
   buildOwnerSelect(getOwnerIds(t));
