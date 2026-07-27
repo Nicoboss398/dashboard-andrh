@@ -629,6 +629,117 @@
 
   .filter-select:focus { border-color: var(--blue); }
 
+  /* ===== Bouton réinitialiser les filtres de colonnes ===== */
+  .btn-clear-filters {
+    padding: 6px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-clear-filters:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ===== Filtres multi-sélection dans les en-têtes de colonnes ===== */
+  /* La carte des actions doit laisser déborder les menus déroulants */
+  #view-tasks .section-card { overflow: visible; }
+
+  .colf-cell { position: relative; min-width: 0; }
+
+  .colf-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .colf-btn:hover { background: #fff; border-color: var(--border); color: var(--text); }
+  .colf-btn.active { background: var(--gradient-soft, #eef2ff); border-color: var(--blue); color: var(--blue); }
+  .colf-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .colf-caret { margin-left: auto; font-size: 8px; flex-shrink: 0; }
+  .colf-badge {
+    flex-shrink: 0;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 9px;
+    line-height: 15px;
+    text-align: center;
+  }
+
+  .colf-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 60;
+    min-width: 190px;
+    max-width: 260px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.16);
+    padding: 6px;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .colf-menu.open { display: block; }
+  /* Les 2 dernières colonnes : aligner le menu à droite pour ne pas déborder */
+  #colf-prio .colf-menu, #colf-status .colf-menu { left: auto; right: 0; }
+
+  .colf-menu-head {
+    display: flex;
+    gap: 6px;
+    padding: 2px 4px 6px;
+    border-bottom: 1px solid var(--bg);
+    margin-bottom: 4px;
+  }
+  .colf-menu-head button {
+    flex: 1;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .colf-menu-head button:hover { border-color: var(--blue); color: var(--blue); }
+
+  .colf-menu-list { max-height: 260px; overflow-y: auto; }
+  .colf-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .colf-opt:hover { background: var(--bg); }
+  .colf-opt input { accent-color: var(--blue); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+  .colf-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* Recherche dynamique dans la barre des actions */
   .task-search {
     padding: 7px 12px 7px 30px;
@@ -2560,29 +2671,8 @@
       <div class="filters-bar">
         <input type="text" class="task-search" id="taskSearch" placeholder="Rechercher une action…"
           oninput="renderTasks()" autocomplete="off">
-        <span style="font-size:12px;font-weight:600;color:var(--text-muted)">Filtrer :</span>
-        <select class="filter-select" id="filterStatus" onchange="renderTasks()">
-          <option value="">Tous les statuts</option>
-          <option value="todo">À faire</option>
-          <option value="inprogress">En cours</option>
-          <option value="done">Terminé</option>
-          <option value="blocked">Bloqué</option>
-        </select>
-        <select class="filter-select" id="filterPhase" onchange="renderTasks()">
-          <option value="">Toutes les phases</option>
-          <option value="1">1. Cadrage &amp; gouvernance</option>
-          <option value="2">2. Diagnostic &amp; veille RH/IA</option>
-          <option value="3">3. Groupes thématiques</option>
-          <option value="4">4. Production des livrables</option>
-          <option value="5">5. Communication &amp; partage</option>
-          <option value="6">6. Évaluation &amp; bilan</option>
-        </select>
-        <select class="filter-select" id="filterPriority" onchange="renderTasks()">
-          <option value="">Toutes priorités</option>
-          <option value="high">Haute</option>
-          <option value="med">Moyenne</option>
-          <option value="low">Basse</option>
-        </select>
+        <span style="font-size:11px;color:var(--text-muted)" title="Cliquez sur les en-têtes de colonnes du tableau pour filtrer">🔽 Filtres dans les en-têtes de colonnes</span>
+        <button type="button" class="btn-clear-filters" id="btnClearColFilters" onclick="clearAllColFilters()" title="Réinitialiser tous les filtres de colonnes">↺ Réinitialiser les filtres</button>
 
         <label class="select-all-wrap" style="margin-left:auto" title="Tout sélectionner / désélectionner">
           <input type="checkbox" class="row-select" id="selectAllTasks" onchange="toggleSelectAll(this.checked)">
@@ -2598,11 +2688,11 @@
         <div title="Déplacer"></div>
         <div title="Sélection"></div>
         <div>Actions</div>
-        <div>Responsables</div>
-        <div>Phase</div>
-        <div>Échéance</div>
-        <div>Priorité</div>
-        <div>Statut</div>
+        <div class="colf-cell" id="colf-owner"></div>
+        <div class="colf-cell" id="colf-phase"></div>
+        <div class="colf-cell" id="colf-ech"></div>
+        <div class="colf-cell" id="colf-prio"></div>
+        <div class="colf-cell" id="colf-status"></div>
         <div>Gérer</div>
       </div>
       <div id="taskList"></div>
@@ -3298,7 +3388,12 @@ var TEAM = [
   { name:'Nicolas BOSSARD', email:'n.bossard@mac.com',
     linkedin:'https://www.linkedin.com/in/nicolas-bossard/',
     username:'nicolas-bossard', initials:'NB',
-    bg:'linear-gradient(135deg,#E8910A,#C07000)' }
+    bg:'linear-gradient(135deg,#E8910A,#C07000)' },
+  { name:'Gunther BUNEL', email:'gunther@pixel-competences.com',
+    linkedin:'https://www.linkedin.com/in/gunther-bunel-aa088173/',
+    username:'gunther-bunel-aa088173', initials:'GB',
+    bg:'linear-gradient(135deg,#0A7C6B,#065A4D)',
+    photo:'data:image/jpeg;base64,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' }
 ];
 
 function avatarErr(img) {
@@ -4606,15 +4701,13 @@ function filterAndGotoActions(status, priority, special) {
   var taskBtn = null;
   btns.forEach(function(b){ if (b.textContent.indexOf('Actions') >= 0) taskBtn = b; });
   showView('tasks', taskBtn);
-  // Apply filters
-  var statusEl   = document.getElementById('filterStatus');
-  var priorityEl = document.getElementById('filterPriority');
-  var phaseEl    = document.getElementById('filterPhase');
-  if (statusEl)   statusEl.value   = status   || '';
-  if (priorityEl) priorityEl.value = priority || '';
-  if (phaseEl)    phaseEl.value    = '';
-  // deadline7 : pas de filtre natif — on vide les filtres pour montrer toutes les actions
-  // et on laisse l'utilisateur repérer les échéances dans la colonne date
+  // Réinitialise puis applique les filtres de colonnes correspondants
+  ['owner','phase','ech','prio','status'].forEach(function(c){ colFilters[c].clear(); });
+  if (status)   colFilters.status.add(status);
+  if (priority) colFilters.prio.add(priority);
+  // deadline7 : échéances proches → « En retard » + « Aujourd'hui » + « Cette semaine »
+  if (special === 'deadline7') { colFilters.ech.add('overdue'); colFilters.ech.add('today'); colFilters.ech.add('week'); }
+  renderColumnFilters();
   renderTasks();
   // Scroll to task list
   setTimeout(function(){ var el=document.getElementById('taskList'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 150);
@@ -4907,16 +5000,160 @@ function onTaskDrop(e, targetIdx) {
   renderAll();
 }
 
+/* ============================================================
+   FILTRES MULTI-SÉLECTION DANS LES EN-TÊTES DE COLONNES
+   Colonnes filtrables : Responsables, Phase, Échéance, Priorité, Statut.
+   Chaque filtre accepte plusieurs valeurs (OU logique).
+   ============================================================ */
+var colFilters = { owner:new Set(), phase:new Set(), ech:new Set(), prio:new Set(), status:new Set() };
+
+var STATUS_OPTS = [['todo','⬜ À faire'],['inprogress','🔵 En cours'],['done','✅ Terminé'],['blocked','🔴 Bloqué']];
+var PRIO_OPTS   = [['high','🔴 Haute'],['med','🟠 Moyenne'],['low','🟢 Basse'],['__none','— Sans priorité']];
+var ECH_OPTS    = [
+  ['overdue','🔴 En retard'],
+  ['today','📌 Aujourd\'hui'],
+  ['week','🗓️ Cette semaine'],
+  ['month','📆 Ce mois-ci'],
+  ['quarter','🗂️ Ce trimestre'],
+  ['later','⏳ Plus tard'],
+  ['__none','— Sans échéance']
+];
+
+/* Range l'échéance d'une action dans une plage exclusive */
+function echBucket(end) {
+  if (!end) return '__none';
+  var d = new Date(String(end) + 'T00:00:00');
+  if (isNaN(d.getTime())) return '__none';
+  var t = new Date(); t.setHours(0,0,0,0);
+  var diff = Math.round((d - t) / 86400000);
+  if (diff < 0) return 'overdue';
+  if (diff === 0) return 'today';
+  var dow = (t.getDay() + 6) % 7;                       // lundi = 0 … dimanche = 6
+  var endWeek = new Date(t); endWeek.setDate(t.getDate() + (6 - dow));
+  if (d <= endWeek) return 'week';
+  var endMonth = new Date(t.getFullYear(), t.getMonth() + 1, 0);
+  if (d <= endMonth) return 'month';
+  var q = Math.floor(t.getMonth() / 3);
+  var endQuarter = new Date(t.getFullYear(), q * 3 + 3, 0);
+  if (d <= endQuarter) return 'quarter';
+  return 'later';
+}
+
+/* Liste [valeur, libellé] des options pour une colonne donnée */
+function colOptions(col) {
+  if (col === 'status') return STATUS_OPTS;
+  if (col === 'prio')   return PRIO_OPTS;
+  if (col === 'ech')    return ECH_OPTS;
+  if (col === 'phase') {
+    var a = (typeof axes !== 'undefined' ? axes : []).map(function(x){ return [String(x.key), x.key + '. ' + x.name]; });
+    a.push(['__none','— Sans phase —']);
+    return a;
+  }
+  if (col === 'owner') {
+    var m = (members || []).map(function(x){ return [String(x.id), x.name]; });
+    m.push(['__none','— Sans responsable —']);
+    return m;
+  }
+  return [];
+}
+
+var COL_LABELS = { owner:'Responsables', phase:'Phase', ech:'Échéance', prio:'Priorité', status:'Statut' };
+
+/* (Re)construit les widgets de filtre dans les en-têtes */
+function renderColumnFilters() {
+  ['owner','phase','ech','prio','status'].forEach(function(col){
+    var host = document.getElementById('colf-' + col);
+    if (!host) return;
+    var n = colFilters[col].size;
+    var items = colOptions(col).map(function(o){
+      var checked = colFilters[col].has(o[0]) ? ' checked' : '';
+      return '<label class="colf-opt"><input type="checkbox" value="' + escAttr(o[0]) + '"' + checked +
+             ' onchange="onColFilterToggle(\'' + col + '\',this.value,this.checked)"><span>' + escAttr(o[1]) + '</span></label>';
+    }).join('');
+    host.innerHTML =
+      '<button type="button" class="colf-btn' + (n ? ' active' : '') + '" onclick="toggleColMenu(event,\'' + col + '\')">' +
+        '<span class="colf-label">' + COL_LABELS[col] + '</span>' +
+        '<span class="colf-badge"' + (n ? '' : ' style="display:none"') + '>' + n + '</span>' +
+        '<span class="colf-caret">▾</span>' +
+      '</button>' +
+      '<div class="colf-menu" id="colfmenu-' + col + '" onclick="event.stopPropagation()">' +
+        '<div class="colf-menu-head">' +
+          '<button type="button" onclick="colFilterAll(\'' + col + '\',true)">Tout</button>' +
+          '<button type="button" onclick="colFilterAll(\'' + col + '\',false)">Effacer</button>' +
+        '</div>' +
+        '<div class="colf-menu-list">' + items + '</div>' +
+      '</div>';
+  });
+}
+
+function updateColBadge(col) {
+  var host = document.getElementById('colf-' + col);
+  if (!host) return;
+  var btn = host.querySelector('.colf-btn');
+  var badge = host.querySelector('.colf-badge');
+  var n = colFilters[col].size;
+  if (badge) { badge.textContent = n; badge.style.display = n ? '' : 'none'; }
+  if (btn) { if (n) btn.classList.add('active'); else btn.classList.remove('active'); }
+}
+
+function toggleColMenu(e, col) {
+  e.stopPropagation();
+  var menu = document.getElementById('colfmenu-' + col);
+  var isOpen = menu && menu.classList.contains('open');
+  document.querySelectorAll('.colf-menu.open').forEach(function(m){ m.classList.remove('open'); });
+  if (menu && !isOpen) menu.classList.add('open');
+}
+
+function onColFilterToggle(col, val, checked) {
+  if (checked) colFilters[col].add(val); else colFilters[col].delete(val);
+  updateColBadge(col);
+  renderTasks();
+}
+
+function colFilterAll(col, select) {
+  colFilters[col].clear();
+  if (select) colOptions(col).forEach(function(o){ colFilters[col].add(o[0]); });
+  var menu = document.getElementById('colfmenu-' + col);
+  if (menu) menu.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked = colFilters[col].has(cb.value); });
+  updateColBadge(col);
+  renderTasks();
+}
+
+function clearAllColFilters() {
+  ['owner','phase','ech','prio','status'].forEach(function(col){ colFilters[col].clear(); });
+  renderColumnFilters();
+  renderTasks();
+}
+
+/* Une action passe-t-elle les filtres de colonnes actifs ? */
+function taskPassesColFilters(t) {
+  var f = colFilters;
+  if (f.status.size && !f.status.has(t.status)) return false;
+  if (f.prio.size   && !f.prio.has(t.priority || '__none')) return false;
+  if (f.phase.size) { var pk = _resolvePhaseKey(t.phase) || '__none'; if (!f.phase.has(pk)) return false; }
+  if (f.ech.size    && !f.ech.has(echBucket(t.end))) return false;
+  if (f.owner.size) {
+    var ids = getOwnerIds(t).map(String);
+    var ok = ids.length ? ids.some(function(id){ return f.owner.has(id); }) : f.owner.has('__none');
+    if (!ok) return false;
+  }
+  return true;
+}
+
+function anyColFilterActive() {
+  var f = colFilters;
+  return !!(f.owner.size || f.phase.size || f.ech.size || f.prio.size || f.status.size);
+}
+
+document.addEventListener('click', function(){
+  document.querySelectorAll('.colf-menu.open').forEach(function(m){ m.classList.remove('open'); });
+});
+
 function renderTasks() {
-  const statusF   = (document.getElementById('filterStatus')   || {}).value || '';
-  const phaseF    = (document.getElementById('filterPhase')    || {}).value || '';
-  const priorityF = (document.getElementById('filterPriority') || {}).value || '';
   const searchF   = ((document.getElementById('taskSearch')    || {}).value || '').trim().toLowerCase();
 
   const filtered = tasks.filter(function(t) {
-    if (statusF   && t.status   !== statusF)   return false;
-    if (phaseF    && _resolvePhaseKey(t.phase) !== phaseF) return false;
-    if (priorityF && t.priority !== priorityF) return false;
+    if (!taskPassesColFilters(t)) return false;
     if (searchF) {
       var hay = [
         t.title || '', t.notes || '', t.owner || '',
@@ -4929,7 +5166,7 @@ function renderTasks() {
 
   const container = document.getElementById('taskList');
   if (!filtered.length) {
-    var emptyMsg = (statusF || phaseF || priorityF || searchF)
+    var emptyMsg = (anyColFilterActive() || searchF)
       ? 'Aucune action ne correspond à votre recherche ou à vos filtres.'
       : 'Aucune action — cliquez sur "Nouvelle action" pour commencer';
     container.innerHTML = '<div class="empty-state"><span class="icon">📝</span><p>' + emptyMsg + '</p></div>';
@@ -5053,15 +5290,10 @@ var selectedTasks = new Set();   // indices (absolus) des actions cochées
 
 /* Liste des indices actuellement visibles (après filtres + recherche) */
 function getVisibleTaskIndices() {
-  const statusF   = (document.getElementById('filterStatus')   || {}).value || '';
-  const phaseF    = (document.getElementById('filterPhase')    || {}).value || '';
-  const priorityF = (document.getElementById('filterPriority') || {}).value || '';
   const searchF   = ((document.getElementById('taskSearch')    || {}).value || '').trim().toLowerCase();
   var idxs = [];
   tasks.forEach(function(t, i) {
-    if (statusF   && t.status   !== statusF)   return;
-    if (phaseF    && t.phase    !== phaseF)    return;
-    if (priorityF && t.priority !== priorityF) return;
+    if (!taskPassesColFilters(t)) return;
     if (searchF) {
       var hay = [t.title||'', t.notes||'', t.owner||'',
         (t.subtasks||[]).map(function(s){return s.title||'';}).join(' ')].join(' ').toLowerCase();
@@ -5333,10 +5565,11 @@ function populateAxeSelects() {
     el.value = cur;
   }
   fill('fPhase',       '<option value="">— Sélectionner une phase —</option>', false);
-  fill('filterPhase',  '<option value="">Toutes les phases</option>',           false);
   fill('resCatFilter', '<option value="">Toutes catégories</option>',       true);
   fill('docCategory',  '<option value="">— Sans catégorie —</option>',      true);
   fill('linkCategory', '<option value="">— Sans catégorie —</option>',      true);
+  // Reconstruit les filtres multi-sélection des colonnes (phase + responsables dépendent des données)
+  if (typeof renderColumnFilters === 'function') renderColumnFilters();
 }
 
 function openAxeModal() {
