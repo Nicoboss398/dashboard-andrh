@@ -500,9 +500,13 @@
     flex-shrink: 0;
   }
 
-  .alert-icon.red { background: #FEE8E8; }
-  .alert-icon.orange { background: #FEF3E2; }
-  .alert-icon.blue { background: #E8F0FE; }
+  .alert-icon.red { background: #FEE8E8; color: #D62B2B; }
+  .alert-icon.orange { background: #FEF3E2; color: #E8910A; }
+  .alert-icon.blue { background: #E8F0FE; color: #0044C3; }
+  .alert-icon svg { width: 22px; height: 22px; display: block; }
+  .section-title .icon { display: inline-flex; align-items: center; }
+  .section-title .icon svg { width: 16px; height: 16px; display: block; }
+  .empty-state .icon svg { width: 40px; height: 40px; display: block; margin: 0 auto; color: var(--blue); opacity: .55; }
 
   .alert-count {
     font-size: 24px;
@@ -2373,7 +2377,7 @@
   </div>
 
   <div class="project-block">
-    <div class="project-label">📁 Chantier actif</div>
+    <div class="project-label"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.06em;margin-right:2px"><path d="M1.5 3.6a1 1 0 011-1h2.7l1.2 1.3h4.9a1 1 0 011 1v5.6a1 1 0 01-1 1h-9.8a1 1 0 01-1-1z"/></svg> Chantier actif</div>
     <div class="project-select">
       <svg class="project-pin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M8.7 1.3l4 4-1.4.5-2.2 2.2-.5 2.6-3.2-3.2-3.2-3.2 2.6-.5L7 1.5z" opacity=".55"/><path d="M5.2 8.8L2 12"/></svg>
       <select id="projectSelect" onchange="loadProject()">
@@ -2412,7 +2416,7 @@
   </div>
 
   <div class="sidebar-footer">
-    <button class="btn-sidebar" onclick="exportData()">💾 Exporter les données</button>
+    <button class="btn-sidebar" onclick="exportData()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 1.5v7M4 5.5l3 3 3-3M2 11.5h10"/></svg> Exporter les données</button>
     <button class="btn-sidebar" onclick="openShareModal()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:-.1em"><circle cx="10" cy="2" r="1.3"/><circle cx="10" cy="11" r="1.3"/><circle cx="2.5" cy="6.5" r="1.3"/><path d="M3.7 5.9L8.8 3M3.7 7.1L8.8 10"/></svg> Partager / QR code</button>
   </div>
 </aside>
@@ -2456,8 +2460,8 @@
         <svg class="lu-ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7.5" r="5.3"/><path d="M7 4.7V7.6l2 1.3"/></svg>
         <span id="currentTime"></span>
       </div>
-      <span class="share-badge" id="shareBadge">👁️ Lecture seule</span>
-      <button class="btn-primary" id="topnav-newaction-btn" onclick="openModal()">➕ Nouvelle action</button>
+      <span class="share-badge" id="shareBadge"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.15em;margin-right:2px"><path d="M1 7s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><circle cx="7" cy="7" r="1.7"/></svg> Lecture seule</span>
+      <button class="btn-primary" id="topnav-newaction-btn" onclick="openModal()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="M7 2v10M2 7h10"/></svg> Nouvelle action</button>
     </div>
   </div>
 
@@ -2546,7 +2550,7 @@
     <!-- Alert cards -->
     <div class="alert-grid">
       <div class="alert-card clickable" onclick="filterAndGotoActions('blocked','','')" title="Voir les actions bloquées">
-        <div class="alert-icon red">🔴</div>
+        <div class="alert-icon red"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.3 2.2h7.4l5 5v7.4l-5 5H7.3l-5-5V7.2z"/><path d="M11 6.6v5"/><circle cx="11" cy="15" r="1" fill="currentColor" stroke="none"/></svg></div>
         <div>
           <div class="alert-count red" id="alertBlocked">0</div>
           <div class="kpi-label" style="margin:2px 0 2px;">Actions bloquées</div>
@@ -2554,7 +2558,7 @@
         </div>
       </div>
       <div class="alert-card clickable" onclick="filterAndGotoActions('','high','')" title="Voir les actions haute priorité">
-        <div class="alert-icon orange">⏰</div>
+        <div class="alert-icon orange"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="12" r="7.5"/><path d="M11 8v4l2.6 1.6"/><path d="M3.6 4.2l2.6-2M18.4 4.2l-2.6-2"/></svg></div>
         <div>
           <div class="alert-count orange" id="alertHigh">0</div>
           <div class="kpi-label" style="margin:2px 0 2px;">Haute priorité</div>
@@ -2562,7 +2566,7 @@
         </div>
       </div>
       <div class="alert-card clickable" onclick="filterAndGotoActions('','','deadline7')" title="Voir les actions à échéance cette semaine">
-        <div class="alert-icon blue">📅</div>
+        <div class="alert-icon blue"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="16" height="14.5" rx="2.2"/><path d="M3 8.5h16M7.5 2.5v4M14.5 2.5v4"/></svg></div>
         <div>
           <div class="alert-count blue" id="alertDeadline">0</div>
           <div class="kpi-label" style="margin:2px 0 2px;">Échéances 7 jours</div>
@@ -2578,8 +2582,8 @@
     <!-- ===== ESPACE DE DISCUSSION ===== -->
     <div class="section-card chat-card" id="chatCard" style="flex:1 1 360px;min-width:300px;display:flex;flex-direction:column;margin-bottom:0">
       <div style="display:flex;gap:6px;margin-bottom:12px;align-items:center">
-        <span style="font-size:13px;font-weight:700;color:var(--navy)">💬 Discussion</span>
-        <button class="chat-tab" onclick="openEmailModal()" style="margin-left:auto">✉️ Email privé</button>
+        <span style="font-size:13px;font-weight:700;color:var(--navy);display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.5A1.5 1.5 0 013 2h8a1.5 1.5 0 011.5 1.5v4A1.5 1.5 0 0111 9H5.5L3 11.2V9H3a1.5 1.5 0 01-1.5-1.5z"/><path d="M4.5 4.7h5M4.5 6.6h3"/></svg> Discussion</span>
+        <button class="chat-tab" onclick="openEmailModal()" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2.5" width="12" height="9" rx="1.5"/><path d="M1.5 3.5L7 7.5l5.5-4"/></svg> Email privé</button>
       </div>
 
       <!-- VUE CHAT -->
@@ -2612,7 +2616,7 @@
     <!-- Avancement par axe (droite) -->
     <div class="section-card" style="flex:1 1 360px;min-width:300px;margin-bottom:0;display:flex;flex-direction:column">
       <div class="section-header">
-        <div class="section-title"><span class="icon">📊</span> Avancement par phase</div>
+        <div class="section-title"><span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12V8M4.5 12V5M7.5 12V7M10.5 12V3"/><path d="M1 12H13"/></svg></span> Avancement par phase</div>
       </div>
       <!-- Table limitée en hauteur -->
       <div class="phase-table-shell" id="phaseTableShell">
@@ -2642,7 +2646,7 @@
       <!-- Bulle "voir plus" -->
       <div class="voir-plus-wrap" id="voirPlusWrap" style="display:none">
         <button class="voir-plus-bubble" onclick="openPhaseExpand()">
-          ↕&nbsp; Voir en grand écran
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M8.5 1.5H12.5V5.5M5.5 12.5H1.5V8.5M12.5 1.5L8 6M1.5 12.5L6 8"/></svg> Voir en grand écran
         </button>
       </div>
     </div>
@@ -2664,15 +2668,15 @@
   <div id="view-tasks" class="view">
     <div class="section-card">
       <div class="section-header">
-        <div class="section-title"><span class="icon">📝</span> Gestion des actions</div>
-        <button class="btn-primary" id="topnav-newaction-btn" onclick="openModal()">➕ Nouvelle action</button>
+        <div class="section-title"><span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="1.5" width="10" height="11" rx="1.6"/><path d="M4.3 4.8h5.4M4.3 7h5.4M4.3 9.2h3.4"/></svg></span> Gestion des actions</div>
+        <button class="btn-primary" id="topnav-newaction-btn" onclick="openModal()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="M7 2v10M2 7h10"/></svg> Nouvelle action</button>
       </div>
 
       <div class="filters-bar">
         <input type="text" class="task-search" id="taskSearch" placeholder="Rechercher une action…"
           oninput="renderTasks()" autocomplete="off">
-        <span style="font-size:11px;color:var(--text-muted)" title="Cliquez sur les en-têtes de colonnes du tableau pour filtrer">🔽 Filtres dans les en-têtes de colonnes</span>
-        <button type="button" class="btn-clear-filters" id="btnClearColFilters" onclick="clearAllColFilters()" title="Réinitialiser tous les filtres de colonnes">↺ Réinitialiser les filtres</button>
+        <span style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px" title="Cliquez sur les en-têtes de colonnes du tableau pour filtrer"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5h11l-4.2 5v4l-2.6 1.3v-5.3z"/></svg> Filtres dans les en-têtes de colonnes</span>
+        <button type="button" class="btn-clear-filters" id="btnClearColFilters" onclick="clearAllColFilters()" title="Réinitialiser tous les filtres de colonnes" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7a5 5 0 11-1.5-3.5"/><path d="M12.5 1.5V4H10"/></svg> Réinitialiser les filtres</button>
 
         <label class="select-all-wrap" style="margin-left:auto" title="Tout sélectionner / désélectionner">
           <input type="checkbox" class="row-select" id="selectAllTasks" onchange="toggleSelectAll(this.checked)">
@@ -2680,7 +2684,7 @@
         </label>
         <button class="btn-delete-selected" id="btnDeleteSelected" onclick="deleteSelectedTasks()" disabled
           title="Supprimer les actions sélectionnées">
-          🗑️ Supprimer la sélection <span class="sel-count" id="selCount"></span>
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M2 3.5h10M5 3.5V2.4a.7.7 0 01.7-.7h2.6a.7.7 0 01.7.7v1.1M5.3 6.2v4M8.7 6.2v4M3 3.5l.6 8h6.8l.6-8"/></svg> Supprimer la sélection <span class="sel-count" id="selCount"></span>
         </button>
       </div>
 
@@ -2703,7 +2707,7 @@
   <div id="view-gantt" class="view">
     <div class="section-card">
       <div class="section-header">
-        <div class="section-title"><span class="icon">📅</span> Planning — Diagramme de Gantt</div>
+        <div class="section-title"><span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2.5" width="12" height="10" rx="2"/><path d="M1 6H13"/><path d="M4.5 1V4M9.5 1V4"/></svg></span> Planning — Diagramme de Gantt</div>
       </div>
       <div class="gantt-legend">
         <span class="gantt-legend-label">Statut :</span>
@@ -2715,7 +2719,7 @@
       </div>
       <div class="gantt-container" id="ganttContainer">
         <div class="empty-state">
-          <span class="icon">📅</span>
+          <span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2.5" width="12" height="10" rx="2"/><path d="M1 6H13"/><path d="M4.5 1V4M9.5 1V4"/></svg></span>
           <p>Ajoutez des dates de début et de fin à vos actions pour afficher le planning visuel</p>
         </div>
       </div>
@@ -2802,8 +2806,8 @@
         oninput="renderResources()">
       <div class="res-type-tabs">
         <button class="res-type-tab active" onclick="setResFilter('all',this)">Tous</button>
-        <button class="res-type-tab" onclick="setResFilter('doc',this)">📄 Documents</button>
-        <button class="res-type-tab" onclick="setResFilter('link',this)">🔗 Liens web</button>
+        <button class="res-type-tab" onclick="setResFilter('doc',this)" style="display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 1.5h5l3 3v8a.8.8 0 01-.8.8H3a.8.8 0 01-.8-.8V2.3A.8.8 0 013 1.5z"/><path d="M8 1.5v3h3"/></svg> Documents</button>
+        <button class="res-type-tab" onclick="setResFilter('link',this)" style="display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 8.2a2.2 2.2 0 003.3.2l1.8-1.8a2.2 2.2 0 00-3.1-3.1l-1 1"/><path d="M8.2 5.8a2.2 2.2 0 00-3.3-.2L3.1 7.4a2.2 2.2 0 003.1 3.1l1-1"/></svg> Liens web</button>
       </div>
       <select class="filter-select" id="resCatFilter" onchange="renderResources()">
         <option value="">Toutes catégories</option>
@@ -2818,18 +2822,18 @@
         <option value="ext">Ressources externes</option>
       </select>
       <button class="btn-primary" onclick="openAddDocModal()" style="gap:6px;white-space:nowrap">
-        📄 Ajouter un document
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 1.5h5l3 3v8a.8.8 0 01-.8.8H3a.8.8 0 01-.8-.8V2.3A.8.8 0 013 1.5z"/><path d="M8 1.5v3h3"/></svg> Ajouter un document
       </button>
       <button class="btn-primary"
         style="background:linear-gradient(145deg,#00B4D8,#0044C3);gap:6px;white-space:nowrap"
         onclick="openAddLinkModal()">
-        🔗 Ajouter un lien
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5.8 8.2a2.2 2.2 0 003.3.2l1.8-1.8a2.2 2.2 0 00-3.1-3.1l-1 1"/><path d="M8.2 5.8a2.2 2.2 0 00-3.3-.2L3.1 7.4a2.2 2.2 0 003.1 3.1l1-1"/></svg> Ajouter un lien
       </button>
     </div>
 
     <!-- Stockage utilisé (visible si des docs existent) -->
     <div class="storage-info-bar" id="storageInfoBar" style="display:none">
-      <span>💾 Stockage documents :</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3a1 1 0 011-1h6l3 3v6a1 1 0 01-1 1H3a1 1 0 01-1-1z"/><path d="M4.5 2v3h4M4.5 11v-2.5h5V11"/></svg> Stockage documents :</span>
       <div class="storage-bar-outer">
         <div class="storage-bar-inner" id="storageBar" style="width:0%"></div>
       </div>
@@ -4390,45 +4394,61 @@ var Backend = (function () {
 
   /* ---- Reconstruction de l'état (tables à plat -> objets imbriqués) ---- */
   function applyState(d) {
-    members = (d.members || []).map(function (m) {
-      return { id: m.id, name: m.name, email: m.email };
-    });
-    var subByTask = {};
-    (d.subtasks || []).forEach(function (s) {
-      (subByTask[s.taskId] = subByTask[s.taskId] || []).push(s);
-    });
-    var projById = {};
-    projects = (d.projects || []).map(function (p) {
-      var obj = { id: p.id, name: p.name, createdAt: p.createdAt, tasks: [] };
-      projById[p.id] = obj;
-      return obj;
-    });
-    (d.tasks || []).forEach(function (t) {
-      var subs = (subByTask[t.id] || []).sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
-        .map(function (s) { return { id: s.id, title: s.title, status: s.status }; });
-      var task = {
-        id: t.id, phase: String(t.phase || ''), title: t.title,
-        ownerId: t.ownerId === '' ? null : t.ownerId, owner: t.owner || '',
-        ownerIds: _reconstructOwnerIds(t),
-        status: t.status || 'todo', start: toISODate(t.start), end: toISODate(t.end),
-        priority: t.priority || '', notes: t.notes || '', created: t.created || '',
-        subtasks: subs
-      };
-      if (projById[t.projectId]) projById[t.projectId].tasks.push(task);
-    });
-    resources = (d.resources || []).map(function (r) { return r; });
-    messages = (d.messages || []).map(function (m) { return m; });
+    // Garde-fou : une réponse invalide ou incomplète ne doit JAMAIS écraser
+    // les données en mémoire. On n'applique un tableau que s'il est réellement
+    // présent (Array). Un champ absent (undefined) = réponse partielle du
+    // backend (lent/instable) → on conserve l'état courant.
+    if (!d || typeof d !== 'object') return;
+
+    if (Array.isArray(d.members)) {
+      members = d.members.map(function (m) {
+        return { id: m.id, name: m.name, email: m.email };
+      });
+    }
+
+    // Ne reconstruire projets + tâches QUE si la réponse contient bien ces
+    // deux tableaux ; sinon on garde les projets/tâches déjà chargés.
+    if (Array.isArray(d.projects) && Array.isArray(d.tasks)) {
+      var subByTask = {};
+      (d.subtasks || []).forEach(function (s) {
+        (subByTask[s.taskId] = subByTask[s.taskId] || []).push(s);
+      });
+      var projById = {};
+      projects = d.projects.map(function (p) {
+        var obj = { id: p.id, name: p.name, createdAt: p.createdAt, tasks: [] };
+        projById[p.id] = obj;
+        return obj;
+      });
+      d.tasks.forEach(function (t) {
+        var subs = (subByTask[t.id] || []).sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
+          .map(function (s) { return { id: s.id, title: s.title, status: s.status }; });
+        var task = {
+          id: t.id, phase: String(t.phase || ''), title: t.title,
+          ownerId: t.ownerId === '' ? null : t.ownerId, owner: t.owner || '',
+          ownerIds: _reconstructOwnerIds(t),
+          status: t.status || 'todo', start: toISODate(t.start), end: toISODate(t.end),
+          priority: t.priority || '', notes: t.notes || '', created: t.created || '',
+          subtasks: subs
+        };
+        if (projById[t.projectId]) projById[t.projectId].tasks.push(task);
+      });
+
+      var curId = null;
+      try { curId = localStorage.getItem(CUR_KEY); } catch (e) {}
+      currentProject = projects.filter(function (p) { return String(p.id) === String(curId); })[0]
+        || projects[0] || null;
+      tasks = currentProject ? currentProject.tasks : [];
+    }
+
+    // Ressources et messages : idem, on n'écrase que si le tableau est présent.
+    if (Array.isArray(d.resources)) resources = d.resources.map(function (r) { return r; });
+    if (Array.isArray(d.messages))  messages  = d.messages.map(function (m) { return m; });
     if (d.axes && d.axes.length) {
       axes = d.axes.map(function (a) { return { key: String(a.key), name: a.name }; });
     }
     rebuildAxeDerived();
 
-    var curId = null;
-    try { curId = localStorage.getItem(CUR_KEY); } catch (e) {}
-    currentProject = projects.filter(function (p) { return String(p.id) === String(curId); })[0]
-      || projects[0] || null;
-    tasks = currentProject ? currentProject.tasks : [];
-    lastRev = d.rev;
+    if (d.rev != null) lastRev = d.rev;
   }
 
   /* ---- Démarrage ---- */
