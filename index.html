@@ -854,6 +854,10 @@
   .owner-checklist .owner-empty { color: var(--text-muted); font-size: 12px; padding: 6px 2px; }
 
   .task-title { font-weight: 500; color: var(--navy); cursor: pointer; }
+  .task-num { display:inline-flex; align-items:center; justify-content:center; min-width:30px; padding:1px 6px; margin-right:6px;
+    border-radius:6px; background:#E8EFFD; color:#0044C3; border:1px solid #C9D8F7; font:700 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+    flex-shrink:0; letter-spacing:.2px; }
+  .task-num.sub { min-width:0; background:#F2F5FB; color:#5A6B9A; border-color:#DDE5F3; font-size:10px; }
   .task-title:hover { text-decoration: underline; text-decoration-color: var(--blue); }
   .task-title small { display: block; color: var(--text-muted); font-weight: 400; font-size: 11px; }
 
@@ -2673,7 +2677,7 @@
       </div>
 
       <div class="filters-bar">
-        <input type="text" class="task-search" id="taskSearch" placeholder="Rechercher une action…"
+        <input type="text" class="task-search" id="taskSearch" placeholder="Rechercher une action ou un n° (ex. 2.3)…"
           oninput="renderTasks()" autocomplete="off">
         <span style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px" title="Cliquez sur les en-têtes de colonnes du tableau pour filtrer"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5h11l-4.2 5v4l-2.6 1.3v-5.3z"/></svg> Filtres dans les en-têtes de colonnes</span>
         <button type="button" class="btn-clear-filters" id="btnClearColFilters" onclick="clearAllColFilters()" title="Réinitialiser tous les filtres de colonnes" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7a5 5 0 11-1.5-3.5"/><path d="M12.5 1.5V4H10"/></svg> Réinitialiser les filtres</button>
@@ -5330,18 +5334,51 @@ document.addEventListener('click', function(){
   document.querySelectorAll('.colf-menu.open').forEach(function(m){ m.classList.remove('open'); });
 });
 
+/* ============================================================
+   NUMÉROTATION DES ACTIONS (calculée à l'affichage, rien n'est stocké)
+   « 2.3 »   = 3e action de l'axe 2 (ordre de la liste, glisser-déposer compris)
+   « 2.3.1 » = 1re sous-action de l'action 2.3
+   ============================================================ */
+var _taskNumCache = { arr: null, sig: '', map: null };
+function _computeTaskNumbers() {
+  var sig = tasks.length + '|' + tasks.map(function(t){ return (t.id||'') + ':' + (t.phase||''); }).join(',');
+  if (_taskNumCache.arr === tasks && _taskNumCache.sig === sig) return _taskNumCache.map;
+  var counters = {}, map = new Map();
+  tasks.forEach(function(t) {
+    var k = _resolvePhaseKey(t.phase);
+    if (k === '' || k == null) k = '–';
+    counters[k] = (counters[k] || 0) + 1;
+    map.set(t, k + '.' + counters[k]);
+  });
+  _taskNumCache = { arr: tasks, sig: sig, map: map };
+  return map;
+}
+function taskNumber(t) { return _computeTaskNumbers().get(t) || ''; }
+function subtaskNumber(t, si) { var n = taskNumber(t); return n ? n + '.' + (si + 1) : ''; }
+function taskNumBadge(t) { var n = taskNumber(t); return n ? '<span class="task-num" title="Action n° ' + n + '">' + n + '</span>' : ''; }
+function _taskSearchHay(t) {
+  var n = taskNumber(t);
+  return [n, t.title || '', t.notes || '', t.owner || '',
+    (t.subtasks || []).map(function(s, si){ return (n ? n + '.' + (si + 1) + ' ' : '') + (s.title || ''); }).join(' ')
+  ].join(' ').toLowerCase();
+}
+/* Recherche par numéro : « 2.3 » trouve l'action 2.3 et ses sous-actions (2.3.x), pas 2.30 */
+function _taskMatchesSearch(t, q) {
+  if (!q) return true;
+  if (/^[\d–-]+(\.\d+)*\.?$/.test(q)) {
+    var n = taskNumber(t), qq = q.replace(/\.$/, '');
+    if (n && (n === qq || n.indexOf(qq + '.') === 0 || qq.indexOf(n + '.') === 0)) return true;
+    if (qq.indexOf('.') !== -1) return false;   // « 2.3 » = recherche par numéro uniquement
+  }
+  return _taskSearchHay(t).indexOf(q) !== -1;
+}
+
 function renderTasks() {
   const searchF   = ((document.getElementById('taskSearch')    || {}).value || '').trim().toLowerCase();
 
   const filtered = tasks.filter(function(t) {
     if (!taskPassesColFilters(t)) return false;
-    if (searchF) {
-      var hay = [
-        t.title || '', t.notes || '', t.owner || '',
-        (t.subtasks || []).map(function(s){ return s.title || ''; }).join(' ')
-      ].join(' ').toLowerCase();
-      if (hay.indexOf(searchF) === -1) return false;
-    }
+    if (searchF && !_taskMatchesSearch(t, searchF)) return false;
     return true;
   });
 
@@ -5395,6 +5432,7 @@ function renderTasks() {
               '<span class="subtask-indent">↳</span>' +
               '<input type="checkbox" class="task-cb"' + (st.status==='done'?' checked':'') +
                 ' onclick="event.stopPropagation();updateSubtaskInline(' + idx + ',' + si + ',\'status\',this.checked?\'done\':\'todo\')">' +
+              '<span class="task-num sub">' + subtaskNumber(t, si) + '</span>' +
               '<span class="subtask-title' + (st.status==='done'?' done':'') + '">' + (st.title||'') + '</span>' +
               '<select class="inline-select" style="min-width:110px;font-size:11px" onclick="event.stopPropagation()" onchange="updateSubtaskInline(' + idx + ',' + si + ',\'status\',this.value)">' +
                 '<option value="todo"'       + (st.status==='todo'       ?' selected':'') + '>⬜ À faire</option>' +
@@ -5421,6 +5459,7 @@ function renderTasks() {
       '<div class="task-title" onclick="editTask(event,' + idx + ')" style="display:flex;flex-direction:column;justify-content:center">' +
         '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">' +
           expandBtn +
+          taskNumBadge(t) +
           '<span>' + (t.title || '(Sans titre)') + '</span>' +
           subtaskBadge +
         '</div>' +
@@ -5475,11 +5514,7 @@ function getVisibleTaskIndices() {
   var idxs = [];
   tasks.forEach(function(t, i) {
     if (!taskPassesColFilters(t)) return;
-    if (searchF) {
-      var hay = [t.title||'', t.notes||'', t.owner||'',
-        (t.subtasks||[]).map(function(s){return s.title||'';}).join(' ')].join(' ').toLowerCase();
-      if (hay.indexOf(searchF) === -1) return;
-    }
+    if (searchF && !_taskMatchesSearch(t, searchF)) return;
     idxs.push(i);
   });
   return idxs;
@@ -5937,7 +5972,7 @@ function editTask(eventOrIdx, idx) {
   }
   const t = tasks[idx];
   editIndex = idx;
-  document.getElementById('modalTitleText').textContent = "Modifier l'action";
+  document.getElementById('modalTitleText').textContent = "Modifier l'action" + (taskNumber(t) ? ' n° ' + taskNumber(t) : '');
   document.getElementById('fPhase').value    = t.phase    || '';
   document.getElementById('fTitle').value    = t.title    || '';
   document.getElementById('fStatus').value   = t.status   || 'todo';
@@ -6001,6 +6036,7 @@ function renderModalSubtasks() {
         '<option value="done"'       + (st.status==='done'       ?' selected':'') + '>✅ Terminé</option>' +
         '<option value="blocked"'    + (st.status==='blocked'    ?' selected':'') + '>🔴 Bloqué</option>' +
       '</select>' +
+      ((editIndex !== null && editIndex !== undefined && tasks[editIndex]) ? '<span class="task-num sub">' + subtaskNumber(tasks[editIndex], i) + '</span>' : '') +
       '<span style="flex:1;font-size:12px;color:var(--navy);' + (st.status==='done'?'text-decoration:line-through;color:var(--text-muted)':'') + '">' + (st.title||'') + '</span>' +
       '<button onclick="deleteEditSubtask(' + i + ')" style="background:#FEE8E8;border:1px solid #F5B5B5;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:11px;flex-shrink:0" title="Supprimer">🗑️</button>';
     list.appendChild(div);
@@ -6503,8 +6539,9 @@ function renderGantt() {
     var tipDate = (t.start ? t.start : '') + ' → ' + (t.end ? t.end : '');
 
     return '<div class="gantt-row">' +
-      '<div class="gantt-task-label" title="' + t.title + ' (' + label + ')">' +
+      '<div class="gantt-task-label" title="' + (taskNumber(t) ? taskNumber(t) + ' · ' : '') + t.title + ' (' + label + ')">' +
         '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bg + ';margin-right:6px;flex-shrink:0;vertical-align:middle"></span>' +
+        '<b style="color:#0044C3;font-family:ui-monospace,Menlo,monospace;font-size:10px;margin-right:5px">' + taskNumber(t) + '</b>' +
         t.title +
       '</div>' +
       '<div class="gantt-track">' +
@@ -6727,7 +6764,7 @@ function renderAnalytics() {
       var barColor = sPct === 100 ? 'var(--success)' : sPct > 0 ? 'var(--blue)' : 'var(--border)';
       return '<div class="bar-row">' +
         '<div class="bar-labels">' +
-          '<span style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + t.title.substring(0,28) + '</span>' +
+          '<span style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:#0044C3;font-family:ui-monospace,Menlo,monospace;font-size:10px;margin-right:4px">' + taskNumber(t) + '</b>' + t.title.substring(0,28) + '</span>' +
           '<span style="font-weight:700;color:' + barColor + '">' + sDone + '/' + subs.length + ' ✓</span>' +
         '</div>' +
         '<div class="bar-outer"><div class="bar-inner" style="width:' + sPct + '%;background:' + barColor + '"></div></div>' +
