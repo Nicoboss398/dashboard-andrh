@@ -4288,10 +4288,17 @@ var Backend = (function () {
   var syncTimer  = null;
   var syncing    = false;
 
-  /* ---- Appel API (avec délai maximal pour ne jamais rester bloqué) ---- */
-  function api(action, payload) {
+  /* ---- Appel API (délai adapté à l'action + réponse vérifiée) ----
+     - Écriture (replaceAll) : jusqu'à 2 min — le serveur peut attendre 25 s
+       un verrou puis réécrire tout le classeur ; l'ancien délai de 25 s
+       coupait la requête juste avant la réponse (« Hors ligne »).
+     - Une réponse non-JSON (page d'erreur Google) est traitée comme une
+       erreur temporaire, pas comme une donnée. */
+  var TIMEOUTS = { replaceAll: 120000, bootstrap: 60000, pull: 30000 };
+  function api(action, payload, timeoutMs) {
+    var ms = timeoutMs || TIMEOUTS[action] || 45000;
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 25000) : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
     var opts = {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -4299,9 +4306,17 @@ var Backend = (function () {
     };
     if (ctrl) opts.signal = ctrl.signal;
     return fetch(WEBAPP_URL, opts)
-      .then(function (r) { return r.json(); })
-      .then(function (j) { if (timer) clearTimeout(timer); return j; },
-            function (e) { if (timer) clearTimeout(timer); throw e; });
+      .then(function (r) { return r.text(); })
+      .then(function (txt) {
+        if (timer) clearTimeout(timer);
+        try { return JSON.parse(txt); }
+        catch (e) { var err = new Error('BAD_RESPONSE'); err.code = 'BAD_RESPONSE'; throw err; }
+      }, function (e) {
+        if (timer) clearTimeout(timer);
+        var err = new Error(e && e.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK');
+        err.code = err.message;
+        throw err;
+      });
   }
 
   /* ---- Indicateur de synchro ---- */
@@ -4456,6 +4471,21 @@ var Backend = (function () {
     if (d.rev != null) lastRev = d.rev;
   }
 
+  /* ---- État de synchronisation ---- */
+  var loaded    = false;   // true seulement après un chargement COMPLET depuis le serveur
+  var dirty     = false;   // modifications locales pas encore confirmées par le serveur
+  var pending   = false;   // modification faite pendant un enregistrement en cours
+  var polling   = false;
+  var failCount = 0;
+  var retryTimer = null;
+  var lastServerTaskCount = 0;
+
+  function countTasks() {
+    var n = 0;
+    (projects || []).forEach(function (p) { n += (p.tasks || []).length; });
+    return n;
+  }
+
   /* ---- Démarrage ---- */
   function start() {
     pill('Connexion…', '#0044C3');
@@ -4476,63 +4506,147 @@ var Backend = (function () {
       }
     } catch (e) {}
 
-    if (accessCode) {
-      api('bootstrap').then(function (res) {
-        if (res && res.ok) {
-          if (!chatMe) { askCode(proceed); } // email non identifié → montrer login complet
-          else { proceed(res); }
-        }
-        else { accessCode = ''; askCode(proceed); }
-      }).catch(function () { askCode(proceed); });
-    } else {
-      askCode(proceed);
-    }
+    // Pastille cliquable : relance immédiate d'un enregistrement en échec
+    var el = ensurePill();
+    el.style.cursor = 'pointer';
+    el.title = 'Cliquer pour relancer la synchronisation';
+    el.addEventListener('click', syncNow);
+
+    // Ne jamais perdre une modification non enregistrée
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty || syncing) { e.preventDefault(); e.returnValue = ''; return ''; }
+    });
+    window.addEventListener('online', function () { if (dirty && !syncing) syncNow(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'visible' || !loaded) return;
+      if (dirty && !syncing) syncNow(); else poll();
+    });
+
+    if (accessCode) bootWithRetry(0);
+    else askCode(proceed);
+  }
+
+  // Chargement initial avec nouvelles tentatives : un serveur lent ou une
+  // erreur passagère ne redemande plus le code et ne bloque plus l'écran.
+  function bootWithRetry(attempt) {
+    api('bootstrap').then(function (res) {
+      if (res && res.ok) {
+        if (!chatMe) { askCode(proceed); } // email non identifié → montrer login complet
+        else { proceed(res); }
+      } else if (res && res.error === 'INVALID_CODE') {
+        accessCode = '';
+        askCode(proceed);
+      } else {
+        retryBoot(attempt);
+      }
+    }).catch(function () { retryBoot(attempt); });
+  }
+  function retryBoot(attempt) {
+    var delay = Math.min(30000, 3000 * Math.pow(2, attempt));   // 3, 6, 12, 24, 30 s…
+    pill('Serveur lent — nouvel essai dans ' + Math.round(delay / 1000) + ' s', '#E8910A');
+    setTimeout(function () { pill('Connexion…', '#0044C3'); bootWithRetry(attempt + 1); }, delay);
   }
 
   function proceed(res) {
-    applyState(res.data);
+    var d = res && res.data;
+    applyState(d);
     if (!projects.length) {
+      // Créer un chantier par défaut UNIQUEMENT si le serveur confirme
+      // explicitement être vide. Une réponse incomplète (champs absents)
+      // ne doit jamais conduire à repousser un état vide (incident 27/08).
+      var serverEmpty = d && Array.isArray(d.projects) && d.projects.length === 0
+        && Array.isArray(d.tasks) && d.tasks.length === 0;
+      if (!serverEmpty) { retryBoot(1); return; }
       projects.push({ id: Date.now(), name: 'Commission Développement RH', tasks: [] });
       currentProject = projects[0];
       tasks = currentProject.tasks;
+      loaded = true;
       scheduleSync(true);
     }
+    loaded = true;
+    lastServerTaskCount = countTasks();
     buildProjectSelect();
     renderAll();
     renderTeam();
-    pill('Synchronisé', '#1BA05E');
+    if (!dirty) pill('Synchronisé', '#1BA05E');
     startPolling();
   }
 
-  /* ---- Sauvegarde (état complet, debounce) ---- */
+  /* ---- Sauvegarde (état complet, debounce, nouvelles tentatives) ---- */
   function snapshot() {
     return { projects: projects, members: members, resources: resources, axes: axes };
   }
   function scheduleSync(now) {
     try { if (currentProject) localStorage.setItem(CUR_KEY, currentProject.id); } catch (e) {}
+    if (!loaded) return;            // jamais d'écriture avant un chargement complet
+    dirty = true;
+    if (syncing) { pending = true; return; }
     clearTimeout(syncTimer);
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    pill('Modifications en attente…', '#E8910A');
     syncTimer = setTimeout(doSync, now ? 0 : 700);
   }
+  function syncNow() {
+    if (!loaded) return;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (dirty && !syncing) doSync();
+    else if (!dirty && !syncing) poll();
+  }
   function doSync() {
-    if (syncing) { scheduleSync(); return; }
-    syncing = true;
-    pill('Enregistrement…', '#E8910A');
+    if (syncing) { pending = true; return; }
+    if (!dirty || !loaded) return;
+
+    // Garde-fou : ne pas pousser un état soudainement vidé sans confirmation
+    var n = countTasks();
+    if (lastServerTaskCount >= 5 && n === 0) {
+      var okEmpty = false;
+      try {
+        okEmpty = window.confirm('Cet enregistrement va supprimer TOUTES les actions ('
+          + lastServerTaskCount + ') sur le serveur partagé. Confirmer ?');
+      } catch (e) {}
+      if (!okEmpty) {
+        dirty = false;
+        pill('Enregistrement annulé — rechargez la page (Cmd+R)', '#D62B2B');
+        return;
+      }
+    }
+
+    syncing = true; dirty = false; pending = false;
+    pill(failCount ? 'Nouvel essai d\'enregistrement…' : 'Enregistrement…', '#E8910A');
     api('replaceAll', snapshot()).then(function (res) {
       syncing = false;
       if (res && res.ok) {
-        if (res.data && res.data.resources) {
+        failCount = 0;
+        if (res.rev != null) lastRev = res.rev;
+        lastServerTaskCount = n;
+        if (dirty || pending) { doSync(); return; }   // modifié pendant l'envoi → on renvoie
+        if (res.data && Array.isArray(res.data.resources)) {
           resources = res.data.resources;            // base64 remplacé par {driveFileId,url}
           if (typeof renderResources === 'function') renderResources();
         }
-        lastRev = res.rev;
         pill('Synchronisé', '#1BA05E');
+      } else if (res && res.error === 'INVALID_CODE') {
+        dirty = true;
+        pill('Code invalide — rechargez la page', '#D62B2B');
       } else {
-        pill(res && res.error === 'INVALID_CODE' ? 'Code invalide' : 'Erreur d\'enregistrement', '#D62B2B');
+        onSyncFail();
       }
     }).catch(function () {
       syncing = false;
-      pill('Hors ligne — non enregistré', '#D62B2B');
+      onSyncFail();
     });
+  }
+  // Échec : on garde les modifications et on réessaie automatiquement
+  // (5 s, 10 s, 20 s, 40 s, puis toutes les 60 s) jusqu'à réussite.
+  function onSyncFail() {
+    dirty = true;
+    failCount++;
+    var delay = Math.min(60000, 5000 * Math.pow(2, failCount - 1));
+    var s = Math.round(delay / 1000);
+    if (failCount >= 3) pill('Non enregistré — nouvel essai auto dans ' + s + ' s (cliquer = maintenant)', '#D62B2B');
+    else pill('Serveur lent — nouvel essai dans ' + s + ' s', '#E8910A');
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = setTimeout(function () { retryTimer = null; doSync(); }, delay);
   }
 
   /* ---- Polling ---- */
@@ -4541,24 +4655,36 @@ var Backend = (function () {
     pollTimer = setInterval(poll, 12000);
   }
   function poll() {
-    if (syncing) return;
+    // Pas de rafraîchissement tant que des modifications locales ne sont pas
+    // enregistrées : sinon la version serveur les écraserait à l'écran.
+    if (!loaded || syncing || dirty || polling) return;
     // ne pas rafraîchir pendant une édition (modale ouverte)
     if (document.querySelector('.modal-backdrop.open, #memberModalBackdrop.open, #phaseExpandBackdrop.open')) return;
+    polling = true;
     api('pull', { since: lastRev }).then(function (res) {
+      polling = false;
       if (!res || !res.ok) return;
+      if (dirty || syncing) return;                 // modification faite pendant la requête
       var d = res.data;
       if (d && d.upToDate) { lastRev = d.rev; return; }
       applyState(d);
+      if (d && Array.isArray(d.projects) && Array.isArray(d.tasks)) lastServerTaskCount = countTasks();
       buildProjectSelect();
       renderAll();
       renderTeam();
       pill('Mis à jour', '#00B4D8');
-      setTimeout(function () { pill('Synchronisé', '#1BA05E'); }, 1200);
-    }).catch(function () {});
+      setTimeout(function () { if (!dirty && !syncing) pill('Synchronisé', '#1BA05E'); }, 1200);
+    }).catch(function () { polling = false; });
   }
 
-  return { start: start, scheduleSync: scheduleSync, api: api, pill: pill };
+  return {
+    start: start, scheduleSync: scheduleSync, syncNow: syncNow, api: api, pill: pill,
+    status: function () {
+      return { loaded: loaded, dirty: dirty, syncing: syncing, failCount: failCount, lastRev: lastRev };
+    }
+  };
 })();
+
 
 /* ============================================================
    INIT
