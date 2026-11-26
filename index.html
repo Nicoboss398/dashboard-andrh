@@ -2347,6 +2347,57 @@
   .mention-item:hover,.mention-item.active { background:var(--gradient-soft); }
   .mention-avatar { width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0; }
   @media (max-width: 820px) { .chat-axes-row { flex-direction: column; } }
+  /* ===== Planning interactif (Gantt) ===== */
+  #view-gantt .section-card, #ganttContainer { min-width:0; max-width:100%; }
+  .gx-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .gx-toolbar .gx-title { margin:0 auto 0 0 !important; display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800; color:var(--navy); }
+  .gx-title .ic { color:var(--blue, #0044C3); }
+  .gx-views { display:inline-flex; background:var(--bg, #F0F4FF); border:1.5px solid var(--border, #D0DCF5); border-radius:10px; padding:3px; gap:2px; }
+  .gx-views button { border:0; background:none; padding:6px 14px; border-radius:7px; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--text-muted, #5A6B9A); cursor:pointer; }
+  .gx-views button.active { background:#fff; color:var(--navy, #00195C); box-shadow:0 1px 4px rgba(0,25,92,.15); }
+  .gx-hint { font-size:11.5px; color:var(--text-muted, #5A6B9A); margin:0 0 10px; }
+  .gx-empty { text-align:center; padding:48px 0; color:var(--text-muted, #5A6B9A); }
+  .gx-scroll { overflow:auto; max-height:70vh; border:1px solid var(--border, #D0DCF5); border-radius:12px; background:#fff; position:relative; }
+  .gx-inner { position:relative; }
+  .gx-row { display:flex; min-height:34px; border-bottom:1px solid #F1F4FB; }
+  .gx-left { position:sticky; left:0; z-index:3; width:300px; min-width:300px; background:#fff; border-right:1px solid var(--border, #D0DCF5);
+             display:flex; align-items:center; gap:7px; padding:5px 10px; font-size:12px; color:var(--text, #1A2B5C); cursor:pointer; overflow:hidden; }
+  .gx-left:hover .gx-name { color:var(--blue, #0044C3); text-decoration:underline; }
+  .gx-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gx-name b { font-family:'Space Mono', monospace; font-size:10.5px; color:var(--navy, #00195C); }
+  .gx-track { position:relative; flex-shrink:0; }
+  .gx-head { position:sticky; z-index:5; background:#F7F9FE; }
+  .gx-head-top { top:0; min-height:26px; }
+  .gx-head-bot { top:26px; min-height:30px; border-bottom:1px solid var(--border, #D0DCF5); }
+  .gx-head .gx-left { background:#F7F9FE; z-index:6; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; color:var(--text-muted, #5A6B9A); cursor:default; }
+  .gx-seg { position:absolute; top:0; bottom:0; border-left:1px solid #E3E9F7; font-size:11px; font-weight:700; color:var(--navy, #00195C); padding:5px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gx-head-bot .gx-seg { font-weight:600; color:var(--text-muted, #5A6B9A); text-align:center; padding:4px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; }
+  .gx-head-bot .gx-seg i { font-style:normal; font-size:9.5px; opacity:.7; }
+  .gx-seg.gx-we { background:#F2F4F9; }
+  .gx-phase { background:#F5F8FF; min-height:28px; }
+  .gx-phase .gx-left { background:#F5F8FF; font-weight:800; color:var(--navy, #00195C); font-size:11.5px; cursor:default; }
+  .gx-phase .gx-left em { font-style:normal; font-weight:600; color:var(--text-muted, #5A6B9A); margin-left:auto; }
+  .gx-body { position:relative; }
+  .gx-grid { position:absolute; top:0; bottom:0; left:300px; pointer-events:none; z-index:1; }
+  .gx-line { position:absolute; top:0; bottom:0; border-left:1px solid #EEF2FA; }
+  .gx-wecol { position:absolute; top:0; bottom:0; background:rgba(240,244,255,.7); }
+  .gx-today { position:absolute; top:0; bottom:0; border-left:2px solid #D62B2B; z-index:2; }
+  .gx-today span { position:absolute; top:2px; left:4px; font-size:9.5px; font-weight:700; color:#D62B2B; background:#fff; padding:0 3px; border-radius:3px; white-space:nowrap; }
+  .gx-bar { position:absolute; top:7px; height:20px; border-radius:6px; z-index:2; cursor:grab; display:flex; align-items:center; padding:0 6px; color:#fff; font-size:10.5px; font-weight:600; box-shadow:0 1px 3px rgba(0,25,92,.2); user-select:none; touch-action:none; }
+  .gx-bar:hover { filter:brightness(1.07); }
+  .gx-bar.gx-dragging { cursor:grabbing; opacity:.85; box-shadow:0 4px 14px rgba(0,25,92,.35); z-index:4; }
+  .gx-bar-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+  .gx-handle { position:absolute; right:0; top:0; bottom:0; width:8px; cursor:ew-resize; border-radius:0 6px 6px 0; }
+  .gx-handle:hover { background:rgba(255,255,255,.35); }
+  .gx-todo { background:#3B6FE0; } .gx-progress { background:#E8930C; } .gx-done { background:#1E9E5A; } .gx-blocked { background:#D62B2B; }
+  .gx-bar.gx-milestone { border-radius:4px; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.22) 0 4px, transparent 4px 8px); }
+  .gx-toolbar .gx-title { font-size:inherit; }
+  .gx-todaybtn { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:9px; border:1.5px solid var(--border, #D0DCF5); background:#fff; color:var(--navy, #00195C); font:700 12.5px inherit; font-family:inherit; cursor:pointer; }
+  .gx-todaybtn:hover { background:var(--bg, #F0F4FF); }
+  .gx-name b { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:#0044C3; }
+  .gx-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; display:inline-block; }
+  .gx-ms-sample { width:18px; height:10px; border-radius:3px; background:#3B6FE0; background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.3) 0 3px, transparent 3px 6px); display:inline-block; }
+  #main, #main > * { min-width:0; } .view { min-width:0; } #gxScroll { max-width:100%; }
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -2712,23 +2763,19 @@
   <!-- ====== GANTT VIEW ====== -->
   <div id="view-gantt" class="view">
     <div class="section-card">
-      <div class="section-header">
-        <div class="section-title"><span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2.5" width="12" height="10" rx="2"/><path d="M1 6H13"/><path d="M4.5 1V4M9.5 1V4"/></svg></span> Planning — Diagramme de Gantt</div>
-      </div>
-      <div class="gantt-legend">
-        <span class="gantt-legend-label">Statut :</span>
-        <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#1BA05E"></span>Terminé</span>
-        <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#0044C3"></span>En cours</span>
-        <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#3B6FE0"></span>À faire</span>
-        <span class="gantt-legend-item"><span class="gantt-legend-dot" style="background:#D62B2B"></span>Bloqué</span>
-        <span class="gantt-legend-item" style="margin-left:auto"><span class="gantt-legend-dot" style="background:rgba(232,145,10,0.7);width:4px;border-radius:2px"></span>Aujourd'hui</span>
-      </div>
-      <div class="gantt-container" id="ganttContainer">
-        <div class="empty-state">
-          <span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2.5" width="12" height="10" rx="2"/><path d="M1 6H13"/><path d="M4.5 1V4M9.5 1V4"/></svg></span>
-          <p>Ajoutez des dates de début et de fin à vos actions pour afficher le planning visuel</p>
+      <div class="gx-toolbar" id="ganttToolbar">
+        <div class="section-title gx-title"><span class="icon"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2.5" width="12" height="10" rx="2"/><path d="M1 6H13"/><path d="M4.5 1V4M9.5 1V4"/></svg></span> Planning — Diagramme de Gantt</div>
+        <div class="gx-views" role="group" aria-label="Échelle de temps">
+          <button type="button" data-view="day" onclick="setGanttView('day')">Jours</button>
+          <button type="button" data-view="week" onclick="setGanttView('week')">Semaines</button>
+          <button type="button" data-view="month" onclick="setGanttView('month')">Mois</button>
+          <button type="button" data-view="year" onclick="setGanttView('year')">Année</button>
         </div>
+        <button type="button" class="gx-todaybtn" onclick="ganttScrollToday()"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><circle cx="7" cy="7" r="1.6" fill="currentColor"/></svg> Aujourd'hui</button>
       </div>
+      <p class="gx-hint">Glissez une barre pour décaler l'action, tirez son bord droit pour changer l'échéance, cliquez pour l'ouvrir. Les actions sans date de début démarrent au 1<sup>er</sup> jour du projet.</p>
+      <div id="ganttContainer"></div>
+    </div>
     </div>
   </div>
 
@@ -6004,6 +6051,8 @@ function saveTask() {
     subtasks:  JSON.parse(JSON.stringify(editSubtasks)),
     created:   editIndex >= 0 ? tasks[editIndex].created : new Date().toISOString()
   };
+  // Sans date de début : 1er jour du projet (comme sur le planning)
+  if (!task.start) task.start = projectStartDate(tasks.filter(function(x, k){ return k !== editIndex; }).concat([task]));
   applyTaskOwners(task, ownerIds);   // remplit ownerIds + owner + ownerId
   if (editIndex >= 0) tasks[editIndex] = task;
   else tasks.push(task);
@@ -6479,82 +6528,244 @@ function saveExcelTemplate() {
 /* ============================================================
    GANTT — couleurs statut + ligne Aujourd'hui
    ============================================================ */
-function renderGantt() {
+/* ============================================================
+   PLANNING INTERACTIF (GANTT) — vues Jours / Semaines / Mois / Année
+   - glisser une barre = décaler l'action ; tirer son bord droit = changer l'échéance
+   - clic sur une barre ou sur le nom = ouvrir l'action
+   - actions sans date de début : démarrent au 1er jour du projet (date enregistrée)
+   ============================================================ */
+var GANTT_SCALES = { day: 34, week: 13, month: 4.2, year: 1.25 };
+var GX_MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+var GX_MONTHS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+var ganttView = (function(){ try { return localStorage.getItem('andrh_gantt_view') || 'week'; } catch (e) { return 'week'; } })();
+var _ganttDrag = null;
+
+function gxDayNum(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000) : null;
+}
+function gxIso(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+function gxDate(n) { return new Date(n * 86400000); }
+function gxToday() { var d = new Date(); return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); }
+function gxFr(iso) { var n = gxDayNum(iso); if (n === null) return ''; var d = gxDate(n); return ('0' + d.getUTCDate()).slice(-2) + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '/' + d.getUTCFullYear(); }
+function gxIsoWeek(n) {
+  var d = gxDate(n); var day = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - day + 3);
+  var firstThu = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7);
+}
+function gxMonthEnd(y, m) { return gxDayNum(gxIso(gxDayNum((m === 11 ? y + 1 : y) + '-' + ('0' + (m === 11 ? 1 : m + 2)).slice(-2) + '-01') - 1)); }
+
+// Premier jour du projet = la plus ancienne date connue de ses actions
+function projectStartDate(list) {
+  var min = null;
+  (list || []).forEach(function(t) {
+    ['start', 'end', 'created'].forEach(function(k) {
+      var n = gxDayNum(t[k]); if (n !== null && (min === null || n < min)) min = n;
+    });
+  });
+  return gxIso(min === null ? gxToday() : min);
+}
+// Les actions sans date de début reçoivent le 1er jour du projet (enregistré dans l'action)
+function fillMissingStartDates() {
+  if (window.__ANDRH_SNAPSHOT__) return false;
+  if (typeof Backend !== 'undefined' && Backend.status && !Backend.status().loaded) return false; // jamais avant un chargement complet
+  var missing = tasks.filter(function(t) { return !t.start; });
+  if (!missing.length) return false;
+  var start = projectStartDate(tasks);
+  missing.forEach(function(t) { t.start = start; });
+  return true;
+}
+function setGanttView(v) {
+  ganttView = v; try { localStorage.setItem('andrh_gantt_view', v); } catch (e) {}
+  renderPlanning(true);
+}
+function ganttScrollToday() {
+  var sc = document.getElementById('gxScroll'); var line = document.getElementById('gxToday');
+  if (sc && line) sc.scrollLeft = Math.max(0, line.offsetLeft + 300 - sc.clientWidth / 2);
+}
+function renderGantt() { renderPlanning(); }
+
+function renderPlanning(keepCenter) {
   var container = document.getElementById('ganttContainer');
-  var datedTasks = tasks.filter(function(t){ return t.start && t.end; });
-  if (!datedTasks.length) {
-    container.innerHTML = '<div class="empty-state"><span class="icon">📅</span><p><strong>Conseil :</strong> Ajoutez des dates de début et de fin à vos actions pour afficher le planning visuel</p></div>';
+  if (!container) return;
+  if (_ganttDrag) return;                                   // pas de rafraîchissement pendant un glisser
+  if (fillMissingStartDates()) saveToStorage();             // dates de début par défaut, partagées
+  var readOnly = !!window.__ANDRH_SNAPSHOT__;
+  var toolbar = document.getElementById('ganttToolbar');
+  if (toolbar) toolbar.querySelectorAll('[data-view]').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-view') === ganttView); });
+
+  var list = tasks.filter(function(t) { return t.start || t.end; });
+  if (!list.length) {
+    container.innerHTML = '<div class="gx-empty"><p>Aucune action datée pour l\'instant.</p></div>';
     return;
   }
+  var px = GANTT_SCALES[ganttView] || GANTT_SCALES.week;
+  var items = list.map(function(t) {
+    var s0 = gxDayNum(t.start), e0 = gxDayNum(t.end);
+    var start = s0 !== null ? s0 : e0;
+    var end = Math.max(start, e0 !== null ? e0 : start);
+    return { t: t, idx: tasks.indexOf(t), start: start, end: end, milestone: e0 === null || e0 === start };
+  });
+  var tday = gxToday();
+  var min = Math.min.apply(null, items.map(function(i) { return i.start; }).concat([tday]));
+  var max = Math.max.apply(null, items.map(function(i) { return i.end; }).concat([tday]));
+  var pad = { day: 3, week: 14, month: 45, year: 120 }[ganttView] || 14;
+  min -= pad; max += pad;
+  if (ganttView === 'week') min -= (gxDate(min).getUTCDay() + 6) % 7;
+  if (ganttView === 'month') min = gxDayNum(gxIso(min).slice(0, 8) + '01');
+  if (ganttView === 'year') min = gxDayNum(gxIso(min).slice(0, 5) + '01-01');
+  var total = max - min + 1;
+  var W = Math.ceil(total * px);
+  function xOf(n) { return (n - min) * px; }
 
-  var allDates = datedTasks.reduce(function(acc, t) { acc.push(new Date(t.start), new Date(t.end)); return acc; }, []);
-  var minDate  = new Date(Math.min.apply(null, allDates));
-  var maxDate  = new Date(Math.max.apply(null, allDates));
-  minDate.setDate(1);
-  maxDate.setDate(1); maxDate.setMonth(maxDate.getMonth() + 1);
-
-  var months = [];
-  var cur = new Date(minDate);
-  while (cur < maxDate) { months.push(new Date(cur)); cur.setMonth(cur.getMonth() + 1); }
-
-  var totalMs = maxDate - minDate;
-  var now     = new Date();
-
-  // Couleurs par statut
-  var STATUS_COLORS = { todo:'#3B6FE0', inprogress:'#0044C3', done:'#1BA05E', blocked:'#D62B2B' };
-  var STATUS_LABELS = { todo:'À faire', inprogress:'En cours', done:'Terminé', blocked:'Bloqué' };
-
-  // En-tête mois
-  var html = '<div class="gantt-header">' +
-    '<div class="gantt-label-col">Action</div>' +
-    '<div class="gantt-months">' +
-      months.map(function(m) {
-        return '<div class="gantt-month">' + m.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}) + '</div>';
-      }).join('') +
-    '</div>' +
-  '</div>';
-
-  // Ligne "Aujourd'hui"
-  var todayPct = ((now - minDate) / totalMs * 100);
-  var todayLine = '';
-  if (todayPct >= 0 && todayPct <= 100) {
-    var pctFrac = (todayPct / 100).toFixed(4);
-    var lineStyle = 'position:absolute;top:0;bottom:0;left:calc(200px + (100% - 200px) * ' + pctFrac + ');width:2px;background:rgba(232,145,10,0.75);pointer-events:none;z-index:4';
-    var labelStyle = 'position:absolute;top:4px;left:50%;transform:translateX(-50%);background:var(--warning);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap';
-    todayLine = '<div style="' + lineStyle + '"><span style="' + labelStyle + '">Aujourd\'hui</span></div>';
+  // ---- en-têtes : ligne haute (mois / années) et ligne basse (jours / semaines / mois / trimestres)
+  var tops = [], bots = [], grid = '';
+  function seg(arr, from, to, label, cls, tip) {
+    arr.push('<div class="gx-seg ' + (cls || '') + '" style="left:' + xOf(from) + 'px;width:' + ((to - from + 1) * px) + 'px" title="' + (tip || label) + '">' + label + '</div>');
   }
+  var d = min, dt, y, m;
+  while (d <= max) {
+    dt = gxDate(d); y = dt.getUTCFullYear(); m = dt.getUTCMonth();
+    if (ganttView === 'month' || ganttView === 'year') {
+      var yEnd = Math.min(max, gxDayNum(y + '-12-31')); seg(tops, d, yEnd, String(y)); d = yEnd + 1;
+    } else {
+      var mEnd = Math.min(max, gxMonthEnd(y, m)); seg(tops, d, mEnd, GX_MONTHS_LONG[m] + ' ' + y); d = mEnd + 1;
+    }
+  }
+  d = min;
+  while (d <= max) {
+    dt = gxDate(d); y = dt.getUTCFullYear(); m = dt.getUTCMonth();
+    if (ganttView === 'day') {
+      var wd = dt.getUTCDay(), we = (wd === 0 || wd === 6);
+      seg(bots, d, d, '<b>' + dt.getUTCDate() + '</b><i>' + 'DLMMJVS'[wd] + '</i>', we ? 'gx-we' : '', gxFr(gxIso(d)));
+      if (we) grid += '<div class="gx-wecol" style="left:' + xOf(d) + 'px;width:' + px + 'px"></div>';
+      d += 1;
+    } else if (ganttView === 'week') {
+      var wEnd = Math.min(max, d + 6 - ((dt.getUTCDay() + 6) % 7));
+      seg(bots, d, wEnd, 'S' + gxIsoWeek(d), '', 'Semaine ' + gxIsoWeek(d) + ' — ' + gxFr(gxIso(d)));
+      grid += '<div class="gx-line" style="left:' + xOf(d) + 'px"></div>'; d = wEnd + 1;
+    } else if (ganttView === 'month') {
+      var mE = Math.min(max, gxMonthEnd(y, m));
+      seg(bots, d, mE, GX_MONTHS[m]); grid += '<div class="gx-line" style="left:' + xOf(d) + 'px"></div>'; d = mE + 1;
+    } else {
+      var q = Math.floor(m / 3), qEnd = Math.min(max, gxMonthEnd(y, q * 3 + 2));
+      seg(bots, d, qEnd, 'T' + (q + 1)); grid += '<div class="gx-line" style="left:' + xOf(d) + 'px"></div>'; d = qEnd + 1;
+    }
+  }
+  var todayLine = (tday >= min && tday <= max) ? '<div class="gx-today" id="gxToday" style="left:' + (xOf(tday) + px / 2) + 'px"><span>Aujourd\'hui</span></div>' : '';
 
-  // Barres
-  var rowsHtml = datedTasks.map(function(t) {
-    var s     = new Date(t.start), e = new Date(t.end);
-    var left  = ((s - minDate) / totalMs * 100).toFixed(1);
-    var width = Math.max(((e - s) / totalMs * 100), 2).toFixed(1);
-    var bg    = STATUS_COLORS[t.status] || '#3B6FE0';
-    var label = STATUS_LABELS[t.status] || '';
-
-    // Pill statut + owner sur la barre
-    var barContent = t.owner
-      ? '<span style="font-size:9px;opacity:0.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + t.owner + '</span>'
-      : '';
-
-    // Tooltip enrichi
-    var tipDate = (t.start ? t.start : '') + ' → ' + (t.end ? t.end : '');
-
-    return '<div class="gantt-row">' +
-      '<div class="gantt-task-label" title="' + (taskNumber(t) ? taskNumber(t) + ' · ' : '') + t.title + ' (' + label + ')">' +
-        '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bg + ';margin-right:6px;flex-shrink:0;vertical-align:middle"></span>' +
-        '<b style="color:#0044C3;font-family:ui-monospace,Menlo,monospace;font-size:10px;margin-right:5px">' + taskNumber(t) + '</b>' +
-        t.title +
-      '</div>' +
-      '<div class="gantt-track">' +
-        '<div class="gantt-bar" title="' + label + ' · ' + tipDate + '" style="left:' + left + '%;width:' + width + '%;background:' + bg + ';opacity:0.92">' +
-          barContent +
+  // ---- lignes regroupées par axe (ordre des axes), puis numéro d'action
+  var STATUS_CLS = { todo: 'gx-todo', inprogress: 'gx-progress', done: 'gx-done', blocked: 'gx-blocked' };
+  var STATUS_LBL = { todo: 'À faire', inprogress: 'En cours', done: 'Terminé', blocked: 'Bloqué' };
+  var groups = axes.map(function(a) { return { key: String(a.key), label: a.key + '. ' + a.name }; });
+  var known = {}; groups.forEach(function(g) { known[g.key] = 1; });
+  items.forEach(function(i) { var k = _resolvePhaseKey(i.t.phase); if (!known[k]) { known[k] = 1; groups.push({ key: k, label: k ? ('Axe ' + k) : 'Sans axe' }); } });
+  var numParts = function(n) { return String(n || '').split('.').map(function(x) { return parseInt(x, 10) || 0; }); };
+  var rows = '';
+  groups.forEach(function(g) {
+    var its = items.filter(function(i) { return _resolvePhaseKey(i.t.phase) === g.key; });
+    if (!its.length) return;
+    rows += '<div class="gx-row gx-phase"><div class="gx-left">' + esc(g.label) + ' <em>' + its.length + '</em></div><div class="gx-track" style="width:' + W + 'px"></div></div>';
+    its.sort(function(a, b) { var na = numParts(taskNumber(a.t)), nb = numParts(taskNumber(b.t)); return (na[1] || 0) - (nb[1] || 0); });
+    its.forEach(function(i) {
+      var t = i.t, num = taskNumber(t);
+      var left = xOf(i.start), width = Math.max((i.end - i.start + 1) * px, i.milestone ? 10 : 6);
+      var label = (num ? num + ' · ' : '') + (t.title || '');
+      var tip = label + '\n' + gxFr(t.start || t.end) + (t.end ? ' → ' + gxFr(t.end) : ' (sans échéance)') +
+        '\nStatut : ' + (STATUS_LBL[t.status] || '') + (t.owner ? '\nResponsable : ' + t.owner : '');
+      var cls = STATUS_CLS[t.status] || 'gx-todo';
+      rows += '<div class="gx-row">' +
+        '<div class="gx-left" onclick="editTask(' + i.idx + ')" title="Ouvrir l\'action">' +
+          '<span class="gx-dot ' + cls + '"></span>' +
+          '<span class="gx-name">' + (num ? '<b>' + esc(num) + '</b> ' : '') + esc(t.title || '') + '</span>' +
         '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+        '<div class="gx-track" style="width:' + W + 'px">' +
+          '<div class="gx-bar ' + cls + (i.milestone ? ' gx-milestone' : '') + '" data-idx="' + i.idx + '" style="left:' + left + 'px;width:' + width + 'px" title="' + esc(tip) + '">' +
+            '<span class="gx-bar-label">' + (width > 70 ? esc(label) : '') + '</span>' +
+            (readOnly ? '' : '<span class="gx-handle" data-handle="1"></span>') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+  });
 
-  container.innerHTML = html + '<div style="position:relative">' + todayLine + rowsHtml + '</div>';
+  var sc0 = document.getElementById('gxScroll');
+  var prevLeft = sc0 ? sc0.scrollLeft : null;
+  container.innerHTML =
+    '<div class="gx-scroll" id="gxScroll">' +
+      '<div class="gx-inner" style="width:' + (W + 300) + 'px">' +
+        '<div class="gx-row gx-head gx-head-top"><div class="gx-left">Action</div><div class="gx-track" style="width:' + W + 'px">' + tops.join('') + '</div></div>' +
+        '<div class="gx-row gx-head gx-head-bot"><div class="gx-left"></div><div class="gx-track" style="width:' + W + 'px">' + bots.join('') + '</div></div>' +
+        '<div class="gx-body"><div class="gx-grid" style="width:' + W + 'px">' + grid + todayLine + '</div>' + rows + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="gantt-legend" style="margin-top:12px">' +
+      '<span class="gantt-legend-item"><span class="gx-dot gx-todo"></span>À faire</span>' +
+      '<span class="gantt-legend-item"><span class="gx-dot gx-progress"></span>En cours</span>' +
+      '<span class="gantt-legend-item"><span class="gx-dot gx-done"></span>Terminé</span>' +
+      '<span class="gantt-legend-item"><span class="gx-dot gx-blocked"></span>Bloqué</span>' +
+      '<span class="gantt-legend-item"><span class="gx-ms-sample"></span>Jalon (sans échéance ou d\'un jour)</span>' +
+    '</div>';
+  var sc = document.getElementById('gxScroll');
+  // garder la position de défilement sauf au 1er affichage / changement d'échelle (centrage sur aujourd'hui)
+  if (keepCenter !== true && prevLeft !== null) sc.scrollLeft = prevLeft;
+  else if (sc.offsetParent) ganttScrollToday();
+  else setTimeout(ganttScrollToday, 0);
+  sc.querySelectorAll('.gx-bar').forEach(function(bar) {
+    if (readOnly) bar.addEventListener('click', function() { editTask(+bar.getAttribute('data-idx')); });
+    else bar.addEventListener('pointerdown', ganttPointerDown);
+  });
+}
+function ganttPointerDown(e) {
+  if (e.button !== 0) return;
+  var bar = e.currentTarget, idx = +bar.getAttribute('data-idx');
+  if (!tasks[idx]) return;
+  _ganttDrag = { bar: bar, idx: idx, t: tasks[idx], px: GANTT_SCALES[ganttView] || GANTT_SCALES.week, x0: e.clientX,
+    left0: bar.offsetLeft, width0: bar.offsetWidth, mode: e.target.getAttribute('data-handle') ? 'resize' : 'move', moved: false, days: 0 };
+  try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+  bar.classList.add('gx-dragging');
+  bar.addEventListener('pointermove', ganttPointerMove);
+  bar.addEventListener('pointerup', ganttPointerUp, { once: true });
+  bar.addEventListener('pointercancel', ganttPointerUp, { once: true });
+  e.preventDefault();
+}
+function ganttPointerMove(e) {
+  var g = _ganttDrag; if (!g) return;
+  var dx = e.clientX - g.x0;
+  if (Math.abs(dx) > 3) g.moved = true;
+  g.days = Math.round(dx / g.px);
+  if (g.mode === 'move') g.bar.style.left = (g.left0 + g.days * g.px) + 'px';
+  else g.bar.style.width = Math.max(g.px, g.width0 + g.days * g.px) + 'px';
+  if (g.moved) {
+    var s0 = gxDayNum(g.t.start), e0 = gxDayNum(g.t.end);
+    if (s0 === null) s0 = e0;
+    var ns = g.mode === 'move' ? s0 + g.days : s0;
+    var ne = g.mode === 'move' ? (e0 !== null ? e0 + g.days : null) : Math.max(s0, (e0 !== null ? e0 : s0) + g.days);
+    g.bar.title = gxFr(gxIso(ns)) + (ne !== null ? ' → ' + gxFr(gxIso(ne)) : '');
+    var lab = g.bar.querySelector('.gx-bar-label'); if (lab) lab.textContent = g.bar.title;
+  }
+}
+function ganttPointerUp() {
+  var g = _ganttDrag; _ganttDrag = null; if (!g) return;
+  g.bar.removeEventListener('pointermove', ganttPointerMove);
+  g.bar.classList.remove('gx-dragging');
+  if (!g.moved) { editTask(g.idx); return; }               // simple clic = ouvrir l'action
+  var t = g.t;
+  if (tasks.indexOf(t) !== -1 && g.days !== 0) {
+    var s0 = gxDayNum(t.start), e0 = gxDayNum(t.end);
+    if (s0 === null) s0 = e0;
+    if (g.mode === 'move') {
+      t.start = gxIso(s0 + g.days);
+      if (e0 !== null) t.end = gxIso(e0 + g.days);
+    } else {
+      t.end = gxIso(Math.max(s0, (e0 !== null ? e0 : s0) + g.days));
+    }
+    saveToStorage();
+    renderAll();
+  } else {
+    renderPlanning();
+  }
 }
 
 /* ============================================================
