@@ -6539,6 +6539,7 @@ var GX_MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'ao�
 var GX_MONTHS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 var ganttView = (function(){ try { return localStorage.getItem('andrh_gantt_view') || 'week'; } catch (e) { return 'week'; } })();
 var _ganttDrag = null;
+var _gxNeedCenter = true;   // centrer sur aujourd'hui au 1er affichage visible
 
 function gxDayNum(iso) {
   var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -6709,9 +6710,9 @@ function renderPlanning(keepCenter) {
     '</div>';
   var sc = document.getElementById('gxScroll');
   // garder la position de défilement sauf au 1er affichage / changement d'échelle (centrage sur aujourd'hui)
-  if (keepCenter !== true && prevLeft !== null) sc.scrollLeft = prevLeft;
-  else if (sc.offsetParent) ganttScrollToday();
-  else setTimeout(ganttScrollToday, 0);
+  if (!sc.offsetParent) _gxNeedCenter = true;                       // onglet masqué : centrer à la prochaine ouverture
+  else if (keepCenter === true || _gxNeedCenter || prevLeft === null) { _gxNeedCenter = false; ganttScrollToday(); }
+  else sc.scrollLeft = prevLeft;
   sc.querySelectorAll('.gx-bar').forEach(function(bar) {
     if (readOnly) bar.addEventListener('click', function() { editTask(+bar.getAttribute('data-idx')); });
     else bar.addEventListener('pointerdown', ganttPointerDown);
